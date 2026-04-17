@@ -1,39 +1,42 @@
 import { format } from 'date-fns'
-import { TIMELINE_START, TIMELINE_END } from '../data/events'
-import { getTypeColor, getImportanceColor } from '../utils/colors'
-
-const TOTAL = TIMELINE_END - TIMELINE_START
+import { getImportanceColor } from '../utils/colors'
 
 export default function Timeline({
   events,
   currentTime,
   isPlaying,
   speed,
+  startTime,
+  endTime,
   onTimeChange,
   onPlayPause,
   onSpeedChange,
   onEventClick,
 }) {
-  const progress = (currentTime - TIMELINE_START) / TOTAL
+  const totalDuration  = endTime - startTime
+  const progress       = Math.max(0, Math.min(1, (currentTime - startTime) / totalDuration))
+  const sliderValue    = Math.round(progress * 1000)
 
   const handleScrub = (e) => {
-    const ratio = parseFloat(e.target.value) / 1000
-    onTimeChange(TIMELINE_START + ratio * TOTAL)
+    onTimeChange(startTime + (Number(e.target.value) / 1000) * totalDuration)
   }
+
+  // Only show events within the active campaign window
+  const visibleEvents = events.filter((ev) => ev.timestamp >= startTime && ev.timestamp <= endTime)
 
   return (
     <div className="absolute bottom-0 left-0 right-0 z-30">
       <div className="mil-panel border-glow">
         {/* Event dots row */}
         <div className="relative h-5 mx-4 mt-2">
-          {events.map((ev) => {
-            const pct = ((ev.timestamp - TIMELINE_START) / TOTAL) * 100
+          {visibleEvents.map((ev) => {
+            const pct      = ((ev.timestamp - startTime) / totalDuration) * 100
             const isActive = ev.timestamp <= currentTime && ev.timestamp >= currentTime - 12 * 3600_000
-            const color = getImportanceColor(ev.importance)
+            const color    = getImportanceColor(ev.importance)
             return (
               <button
                 key={ev.id}
-                onClick={() => onEventClick(ev)}
+                onClick={() => { onTimeChange(ev.timestamp); onEventClick(ev) }}
                 title={ev.title}
                 className="absolute -translate-x-1/2 transition-all hover:scale-150"
                 style={{ left: `${pct}%`, bottom: 0 }}
@@ -41,10 +44,10 @@ export default function Timeline({
                 <span
                   className="block rounded-full"
                   style={{
-                    width:  ev.importance === 'critical' ? 8 : 5,
-                    height: ev.importance === 'critical' ? 8 : 5,
+                    width:     ev.importance === 'critical' ? 8 : 5,
+                    height:    ev.importance === 'critical' ? 8 : 5,
                     background: isActive ? color : `${color}55`,
-                    boxShadow: isActive ? `0 0 6px ${color}` : 'none',
+                    boxShadow:  isActive ? `0 0 6px ${color}` : 'none',
                   }}
                 />
               </button>
@@ -63,7 +66,7 @@ export default function Timeline({
             type="range"
             min={0}
             max={1000}
-            value={Math.round(progress * 1000)}
+            value={sliderValue}
             onChange={handleScrub}
             className="w-full"
           />
@@ -103,11 +106,11 @@ export default function Timeline({
             </span>
           </div>
 
-          {/* Date range labels */}
+          {/* Campaign date range labels */}
           <div className="flex items-center gap-4 text-green-800 text-xs">
-            <span>{format(TIMELINE_START, 'MMM yyyy')}</span>
+            <span>{format(new Date(startTime), 'dd MMM yyyy')}</span>
             <span>──</span>
-            <span>{format(TIMELINE_END, 'MMM yyyy')}</span>
+            <span>{format(new Date(endTime), 'dd MMM yyyy')}</span>
           </div>
         </div>
       </div>
