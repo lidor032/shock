@@ -8,6 +8,8 @@ export const EVENT_TYPES = {
   NAVAL:      'naval',
   DEFENSE:    'defense',
   GROUND:     'ground',
+  DEPLOYMENT: 'deployment',  // surface-hugging naval/ground force movement
+  AIRLIFT:    'airlift',     // low-altitude strategic air transport
 }
 
 export const COUNTRIES = {
