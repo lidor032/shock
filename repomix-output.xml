@@ -1,0 +1,3367 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.claude/
+  settings.local.json
+src/
+  components/
+    EventCard.jsx
+    Globe3D.jsx
+    Header.jsx
+    Legend.jsx
+    NewsFeed.jsx
+    Timeline.jsx
+    VideoModal.jsx
+  data/
+    events.js
+    newsHeadlines.js
+  hooks/
+    useNews.js
+    useSimulation.js
+  utils/
+    colors.js
+  App.jsx
+  index.css
+  main.jsx
+index.html
+package.json
+postcss.config.js
+stan.ipynb
+tailwind.config.js
+vite.config.js
+war_map.html
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".claude/settings.local.json">
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/lidor/Desktop/stam -type f -name .*)",
+      "Bash(npm install:*)",
+      "Bash(python3:*)",
+      "Skill(update-config)",
+      "Bash(git -C /Users/lidor/Desktop/stam rev-parse --git-dir)",
+      "Bash(jq:*)"
+    ]
+  }
+}
+</file>
+
+<file path="src/components/EventCard.jsx">
+import { getTypeColor, getTypeIcon, getImportanceColor, getCountryColor } from '../utils/colors'
+import { format } from 'date-fns'
+
+export default function EventCard({ event, onClose, onWatchVideo }) {
+  if (!event) return null
+
+  const typeColor   = getTypeColor(event.type)
+  const impColor    = getImportanceColor(event.importance)
+  const countryColor = getCountryColor(event.country)
+
+  return (
+    <div
+      className="absolute right-4 top-28 bottom-20 z-30 w-80 fade-in flex flex-col"
+      style={{ maxHeight: 'calc(100vh - 180px)' }}
+    >
+      <div
+        className="mil-panel rounded flex flex-col overflow-hidden"
+        style={{
+          border: `1px solid ${typeColor}44`,
+          boxShadow: `0 0 20px ${typeColor}22, inset 0 0 20px rgba(0,0,0,0.5)`,
+        }}
+      >
+        {/* Header */}
+        <div
+          className="px-3 py-2 flex items-start justify-between gap-2"
+          style={{ borderBottom: `1px solid ${typeColor}33` }}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">{getTypeIcon(event.type)}</span>
+              {event.importance === 'critical' && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: `${impColor}22`, color: impColor, border: `1px solid ${impColor}44` }}>
+                  ◉ CRITICAL
+                </span>
+              )}
+              {event.simulated && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-yellow-950 text-yellow-400 border border-yellow-700">
+                  SIMULATED
+                </span>
+              )}
+            </div>
+            <div className="text-xs font-bold leading-tight" style={{ color: typeColor, textShadow: `0 0 8px ${typeColor}` }}>
+              {event.title}
+            </div>
+            <div className="text-xs text-green-400 mt-0.5 leading-tight">{event.subtitle}</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-green-700 hover:text-green-300 text-lg leading-none flex-shrink-0 mt-0.5"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          {/* Meta row */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <MetaPill label="DATE" value={event.date} />
+            <MetaPill label="ACTOR" value={event.country} color={countryColor} />
+            <MetaPill label="TYPE" value={event.type.toUpperCase()} />
+          </div>
+
+          {/* Description */}
+          <div className="text-xs text-green-300 leading-relaxed">
+            {event.description}
+          </div>
+
+          {/* Locations */}
+          <div>
+            <FieldLabel>ORIGIN</FieldLabel>
+            <div className="text-xs text-green-400 ml-2">{event.origin?.label}</div>
+            <FieldLabel>TARGET(S)</FieldLabel>
+            <div className="ml-2 space-y-0.5">
+              {event.targets?.map((t, i) => (
+                <div key={i} className="text-xs text-green-400">↳ {t.label}</div>
+              ))}
+            </div>
+          </div>
+
+          {/* Casualties */}
+          {event.casualties && (
+            <div>
+              <FieldLabel>CASUALTIES</FieldLabel>
+              <div className="text-xs ml-2" style={{ color: event.casualties.includes('killed') || event.casualties.includes('KIA') ? '#ff6666' : '#00ff88' }}>
+                {event.casualties}
+              </div>
+            </div>
+          )}
+
+          {/* Tags */}
+          <div className="flex flex-wrap gap-1">
+            {event.tags?.map((tag) => (
+              <span key={tag} className="text-xs px-1.5 py-0.5 rounded bg-green-950 text-green-600 border border-green-900">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          {/* Source */}
+          <div className="text-xs text-green-700">
+            <span className="text-green-600">SOURCE: </span>{event.source}
+          </div>
+        </div>
+
+        {/* Footer — Watch Video */}
+        <div
+          className="p-3"
+          style={{ borderTop: `1px solid ${typeColor}22` }}
+        >
+          <button
+            onClick={onWatchVideo}
+            className="w-full py-2 rounded text-xs font-bold tracking-widest flex items-center justify-center gap-2 transition-all hover:brightness-110"
+            style={{
+              background: `${typeColor}22`,
+              border: `1px solid ${typeColor}55`,
+              color: typeColor,
+              textShadow: `0 0 8px ${typeColor}`,
+              boxShadow: `0 0 10px ${typeColor}11`,
+            }}
+          >
+            ▶ WATCH VIDEO FOOTAGE
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MetaPill({ label, value, color }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-green-700 text-xs">{label}</span>
+      <span className="text-xs font-bold" style={{ color: color || '#00ff41' }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function FieldLabel({ children }) {
+  return <div className="text-green-700 text-xs tracking-widest mt-1">{children}</div>
+}
+</file>
+
+<file path="src/components/Globe3D.jsx">
+import { useRef, useEffect, useState, useCallback } from 'react'
+import Globe from 'react-globe.gl'
+import { getTypeColor, getImportanceColor } from '../utils/colors'
+
+// Middle East center
+const INIT_LAT = 31
+const INIT_LNG  = 44
+const INIT_ALT  = 1.8
+
+export default function Globe3D({ events, activeEvents, selectedEvent, onEventClick }) {
+  const globeRef  = useRef()
+  const [dims, setDims] = useState({ w: window.innerWidth, h: window.innerHeight })
+  const [ready, setReady] = useState(false)
+
+  // Track window size
+  useEffect(() => {
+    const handler = () => setDims({ w: window.innerWidth, h: window.innerHeight })
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+
+  // Center on Middle East on mount
+  useEffect(() => {
+    if (!globeRef.current) return
+    const timer = setTimeout(() => {
+      globeRef.current.pointOfView({ lat: INIT_LAT, lng: INIT_LNG, altitude: INIT_ALT }, 1500)
+      setReady(true)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // ── Build arc data ─────────────────────────────────────────────────────────
+  const arcs = activeEvents.flatMap((ev) =>
+    (ev.targets ?? []).map((target) => ({
+      startLat: ev.origin.lat,
+      startLng: ev.origin.lng,
+      endLat:   target.lat,
+      endLng:   target.lng,
+      color:    ev.arcColor ?? [getTypeColor(ev.type), getTypeColor(ev.type)],
+      altitude: ev.arcAltitude ?? 0.3,
+      animTime: ev.arcSpeed ?? 1800,
+      event:    ev,
+    }))
+  )
+
+  // ── Build point data (all event origins + targets) ─────────────────────────
+  const activeIds = new Set(activeEvents.map((e) => e.id))
+
+  const points = events.flatMap((ev) => {
+    const isActive   = activeIds.has(ev.id)
+    const isSelected = selectedEvent?.id === ev.id
+    const color      = getImportanceColor(ev.importance)
+
+    const pts = [
+      {
+        lat:   ev.origin.lat,
+        lng:   ev.origin.lng,
+        label: ev.origin.label,
+        size:  isSelected ? 0.6 : isActive ? 0.45 : 0.25,
+        color: isActive ? color : `${color}55`,
+        altitude: 0.005,
+        event: ev,
+      },
+    ]
+
+    if (isActive) {
+      ev.targets?.forEach((t) => {
+        pts.push({
+          lat:   t.lat,
+          lng:   t.lng,
+          label: t.label,
+          size:  0.4,
+          color: '#ff2222',
+          altitude: 0.005,
+          event: ev,
+        })
+      })
+    }
+
+    return pts
+  })
+
+  // ── Build HTML labels for active events ───────────────────────────────────
+  const labels = activeEvents.map((ev) => ({
+    lat:   ev.origin.lat,
+    lng:   ev.origin.lng,
+    text:  ev.origin.label,
+    color: getTypeColor(ev.type),
+    size:  0.6,
+  }))
+
+  // ── Click handler ──────────────────────────────────────────────────────────
+  const handlePointClick = useCallback((pt) => {
+    if (pt?.event) {
+      onEventClick(pt.event)
+      // Fly to the event
+      if (globeRef.current) {
+        globeRef.current.pointOfView(
+          { lat: pt.lat, lng: pt.lng, altitude: 1.0 },
+          800
+        )
+      }
+    }
+  }, [onEventClick])
+
+  const handleArcClick = useCallback((arc) => {
+    if (arc?.event) onEventClick(arc.event)
+  }, [onEventClick])
+
+  // ── HTML element for labels ────────────────────────────────────────────────
+  const htmlLabel = useCallback((d) => {
+    const el = document.createElement('div')
+    el.className = 'event-label'
+    el.textContent = d.text
+    el.style.color = d.color
+    el.style.borderColor = `${d.color}88`
+    el.style.textShadow = `0 0 6px ${d.color}`
+    return el
+  }, [])
+
+  return (
+    <div className="w-full h-full">
+      <Globe
+        ref={globeRef}
+        width={dims.w}
+        height={dims.h}
+
+        // Textures
+        globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
+        backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
+
+        // Atmosphere — military green
+        atmosphereColor="#00cc44"
+        atmosphereAltitude={0.18}
+
+        // ── Arcs (missiles / drones / airstrikes) ──────────────────────────
+        arcsData={arcs}
+        arcStartLat="startLat"
+        arcStartLng="startLng"
+        arcEndLat="endLat"
+        arcEndLng="endLng"
+        arcColor="color"
+        arcAltitudeAutoScale={false}
+        arcAltitude="altitude"
+        arcStroke={0.5}
+        arcDashLength={0.35}
+        arcDashGap={0.15}
+        arcDashAnimateTime="animTime"
+        arcLabel={(d) => d.event?.title}
+        onArcClick={handleArcClick}
+        onArcHover={(arc) => { document.body.style.cursor = arc ? 'pointer' : 'auto' }}
+
+        // ── Points (event markers) ─────────────────────────────────────────
+        pointsData={points}
+        pointLat="lat"
+        pointLng="lng"
+        pointColor="color"
+        pointAltitude="altitude"
+        pointRadius="size"
+        pointsMerge={false}
+        pointLabel={(d) => d.label}
+        onPointClick={handlePointClick}
+        onPointHover={(pt) => { document.body.style.cursor = pt ? 'pointer' : 'auto' }}
+
+        // ── HTML labels ────────────────────────────────────────────────────
+        htmlElementsData={labels}
+        htmlLat="lat"
+        htmlLng="lng"
+        htmlAltitude={0.015}
+        htmlElement={htmlLabel}
+
+        // ── Interaction ────────────────────────────────────────────────────
+        enablePointerInteraction={true}
+        animateIn={false}
+      />
+
+      {/* Loading overlay */}
+      {!ready && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
+          <div className="text-center">
+            <div className="text-green-400 glow text-lg font-bold tracking-widest animate-pulse">
+              INITIALIZING THEATER MAP...
+            </div>
+            <div className="text-green-700 text-xs mt-2">LOADING SATELLITE IMAGERY</div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/Header.jsx">
+import { useState } from 'react'
+import { format } from 'date-fns'
+
+export default function Header({ mode, onModeChange }) {
+  return (
+    <div className="absolute top-0 left-0 right-0 z-30 flex items-stretch pointer-events-none">
+      {/* Left block — title */}
+      <div className="mil-panel border-glow px-4 py-2 flex items-center gap-3 pointer-events-auto">
+        <div className="flex flex-col">
+          <span className="text-xs text-green-600 tracking-widest uppercase">OSINT Theater Map</span>
+          <span className="text-sm glow font-bold tracking-wider">IL / IR / US CONFLICT</span>
+        </div>
+        <div className="w-px h-8 bg-green-800 mx-1" />
+        <div className="flex flex-col text-xs">
+          <span className="text-green-500">{format(new Date(), 'dd MMM yyyy')}</span>
+          <LiveClock />
+        </div>
+      </div>
+
+      {/* Center — mode toggle */}
+      <div className="flex-1 flex justify-center items-center pointer-events-auto">
+        <div className="mil-panel border-glow flex rounded overflow-hidden">
+          <ModeBtn active={mode === 'live'} onClick={() => onModeChange('live')} color="red">
+            <span className={`inline-block w-2 h-2 rounded-full mr-2 ${mode === 'live' ? 'bg-red-500 animate-pulse' : 'bg-red-900'}`} />
+            LIVE
+          </ModeBtn>
+          <ModeBtn active={mode === 'timeline'} onClick={() => onModeChange('timeline')} color="green">
+            ⏱ TIMELINE
+          </ModeBtn>
+        </div>
+      </div>
+
+      {/* Right block — status chips */}
+      <div className="mil-panel border-glow px-4 py-2 flex items-center gap-4 pointer-events-auto">
+        <StatusChip label="IRAN THREAT" value="CRITICAL" color="red" />
+        <StatusChip label="ACTIVE OPS" value="3" color="amber" />
+        <StatusChip label="US CARRIERS" value="2" color="blue" />
+      </div>
+    </div>
+  )
+}
+
+function ModeBtn({ active, onClick, children, color }) {
+  const activeClass =
+    color === 'red'
+      ? 'bg-red-950 text-red-400 border-b-2 border-red-500 glow-red'
+      : 'bg-green-950 text-green-400 border-b-2 border-green-500 glow'
+
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 text-xs font-bold tracking-widest transition-all ${
+        active ? activeClass : 'text-green-800 hover:text-green-500'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function StatusChip({ label, value, color }) {
+  const colors = {
+    red:   'text-red-400 glow-red',
+    amber: 'text-yellow-400 glow-amber',
+    blue:  'text-blue-400 glow-blue',
+    green: 'text-green-400 glow',
+  }
+  return (
+    <div className="flex flex-col items-center">
+      <span className="text-green-700 text-xs tracking-widest">{label}</span>
+      <span className={`text-sm font-bold ${colors[color] ?? colors.green}`}>{value}</span>
+    </div>
+  )
+}
+
+function LiveClock() {
+  const [time, setTime] = useState(new Date())
+
+  useState(() => {
+    const id = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(id)
+  })
+
+  return (
+    <span className="text-green-400 glow font-bold tabular-nums">
+      {format(time, 'HH:mm:ss')} UTC
+    </span>
+  )
+}
+</file>
+
+<file path="src/components/Legend.jsx">
+import { TYPE_COLORS, COUNTRY_COLORS } from '../utils/colors'
+import { EVENT_TYPES, COUNTRIES } from '../data/events'
+import { useState } from 'react'
+
+export default function Legend() {
+  const [collapsed, setCollapsed] = useState(false)
+
+  return (
+    <div className="absolute bottom-4 right-4 z-30 fade-in">
+      <div className="mil-panel border-glow rounded p-3 min-w-44">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="w-full flex items-center justify-between text-xs text-green-500 glow mb-2"
+        >
+          <span className="tracking-widest font-bold">LEGEND</span>
+          <span>{collapsed ? '▲' : '▼'}</span>
+        </button>
+
+        {!collapsed && (
+          <div className="space-y-3">
+            {/* Event types */}
+            <div>
+              <div className="text-green-700 text-xs tracking-widest mb-1">STRIKE TYPE</div>
+              {Object.entries(TYPE_COLORS).map(([type, meta]) => (
+                <div key={type} className="flex items-center gap-2 mb-1">
+                  <ArcSwatch color={meta.primary} />
+                  <span className="text-xs text-green-400">{meta.icon} {meta.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-green-900" />
+
+            {/* Countries */}
+            <div>
+              <div className="text-green-700 text-xs tracking-widest mb-1">ACTOR</div>
+              {Object.entries(COUNTRY_COLORS).map(([country, color]) => (
+                <div key={country} className="flex items-center gap-2 mb-1">
+                  <DotSwatch color={color} />
+                  <span className="text-xs text-green-400">{country}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-green-900" />
+
+            {/* Importance */}
+            <div className="text-xs text-green-700">
+              <div className="flex items-center gap-2"><span className="text-red-400 font-bold text-base">●</span> Critical event</div>
+              <div className="flex items-center gap-2 mt-0.5"><span className="text-yellow-400 font-bold text-sm">●</span> Major event</div>
+            </div>
+
+            <div className="border-t border-green-900 pt-1">
+              <div className="text-green-800 text-xs italic">
+                🔶 SIMULATED events marked
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ArcSwatch({ color }) {
+  return (
+    <svg width="28" height="10" viewBox="0 0 28 10">
+      <path d="M 2 8 Q 14 0 26 8" stroke={color} strokeWidth="2" fill="none" strokeDasharray="4 2" />
+    </svg>
+  )
+}
+
+function DotSwatch({ color }) {
+  return (
+    <span
+      className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+      style={{ background: color, boxShadow: `0 0 4px ${color}` }}
+    />
+  )
+}
+</file>
+
+<file path="src/components/NewsFeed.jsx">
+export default function NewsFeed({ headlines }) {
+  if (!headlines?.length) return null
+
+  // Duplicate array to create seamless loop
+  const items = [...headlines, ...headlines]
+
+  return (
+    <div className="absolute top-[52px] left-0 right-0 z-20 flex items-center mil-panel border-t border-b border-green-900 overflow-hidden">
+      {/* Source label */}
+      <div className="flex-shrink-0 bg-red-900 border-r border-red-700 px-3 py-1 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+        <span className="text-red-300 text-xs font-bold tracking-widest">LIVE NEWS</span>
+      </div>
+
+      {/* Scrolling ticker */}
+      <div className="flex-1 overflow-hidden h-7 flex items-center">
+        <div className="ticker-track flex gap-0">
+          {items.map((h, i) => (
+            <span key={i} className="inline-flex items-center text-xs text-green-300 mr-10">
+              <span className="text-yellow-500 mr-2 font-bold">[{h.source}]</span>
+              <a
+                href={h.url !== '#' ? h.url : undefined}
+                target={h.url !== '#' ? '_blank' : undefined}
+                rel="noreferrer"
+                className={h.url !== '#' ? 'hover:text-green-100 cursor-pointer' : ''}
+              >
+                {h.title}
+              </a>
+              <span className="text-green-700 ml-3">{h.time}</span>
+              <span className="text-green-800 mx-6">◆</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/components/VideoModal.jsx">
+import { useEffect } from 'react'
+import { getTypeColor } from '../utils/colors'
+
+export default function VideoModal({ event, onClose }) {
+  if (!event) return null
+
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const typeColor   = getTypeColor(event.type)
+  // YouTube search embed — shows search results for the event inside the player
+  const searchQuery = encodeURIComponent(event.searchQuery ?? event.title)
+  const embedSrc    = `https://www.youtube.com/embed?listType=search&list=${searchQuery}&autoplay=1`
+  const ytSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery}`
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center fade-in"
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        className="mil-panel rounded-lg flex flex-col overflow-hidden"
+        style={{
+          width: 'min(860px, 96vw)',
+          maxHeight: '90vh',
+          border: `1px solid ${typeColor}55`,
+          boxShadow: `0 0 40px ${typeColor}22`,
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-4 py-3 flex-shrink-0"
+          style={{ borderBottom: `1px solid ${typeColor}33` }}
+        >
+          <div>
+            <div className="text-xs tracking-widest text-green-600">VIDEO INTELLIGENCE</div>
+            <div className="text-sm font-bold" style={{ color: typeColor }}>
+              {event.title}
+            </div>
+            <div className="text-xs text-green-400">{event.subtitle}</div>
+          </div>
+          <div className="flex items-center gap-3">
+            <a
+              href={ytSearchUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-green-600 hover:text-green-300 underline"
+            >
+              Open in YouTube ↗
+            </a>
+            <button
+              onClick={onClose}
+              className="text-green-600 hover:text-green-200 text-2xl leading-none"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        {/* YouTube Embed */}
+        <div className="relative w-full flex-1 min-h-0" style={{ aspectRatio: '16/9', minHeight: 320 }}>
+          <iframe
+            key={event.id}
+            src={embedSrc}
+            title={event.title}
+            allowFullScreen
+            allow="autoplay; encrypted-media"
+            className="absolute inset-0 w-full h-full"
+            style={{ border: 'none', background: '#000' }}
+          />
+        </div>
+
+        {/* Footer */}
+        <div
+          className="px-4 py-2 flex items-center justify-between text-xs text-green-700 flex-shrink-0"
+          style={{ borderTop: `1px solid ${typeColor}22` }}
+        >
+          <span>SOURCE: {event.source}</span>
+          <span>{event.date} · {event.country}</span>
+          {event.simulated && (
+            <span className="text-yellow-600 font-bold">⚠ SIMULATED EVENT</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/data/newsHeadlines.js">
+// Fallback news headlines used when no live API is configured
+// Format mirrors NewsAPI response structure
+
+export const fallbackHeadlines = [
+  { title: 'Israel signals readiness for further Iranian strikes if nuclear talks fail', source: 'Reuters', time: '2m ago', url: '#' },
+  { title: 'Iran enriches uranium to 84% purity — IAEA "gravely concerned"', source: 'AP', time: '8m ago', url: '#' },
+  { title: 'US deploys additional THAAD battery to Israel amid Iran tensions', source: 'Defense News', time: '15m ago', url: '#' },
+  { title: 'Houthi attack damages Singapore-flagged tanker in Red Sea', source: 'Lloyd\'s List', time: '22m ago', url: '#' },
+  { title: 'Netanyahu says military option against Iran nuclear program "remains on the table"', source: 'Times of Israel', time: '35m ago', url: '#' },
+  { title: 'Iran\'s supreme leader: "Zionist entity will cease to exist within a generation"', source: 'Al Jazeera', time: '41m ago', url: '#' },
+  { title: 'US-Iran Oman talks stall over enrichment caps — White House', source: 'WSJ', time: '55m ago', url: '#' },
+  { title: 'IDF reports 300+ rockets fired from Gaza since ceasefire collapsed', source: 'IDF Spokesperson', time: '1h ago', url: '#' },
+  { title: 'Russia reportedly shares satellite intelligence with Iran — US officials', source: 'NYT', time: '1h 12m ago', url: '#' },
+  { title: 'Saudi Arabia warns regional war could "spike oil to $200/barrel"', source: 'Bloomberg', time: '1h 30m ago', url: '#' },
+  { title: 'IRGC test-fires Fatah-2 hypersonic missile in Persian Gulf exercise', source: 'Tasnim News', time: '2h ago', url: '#' },
+  { title: 'UK joins US in Red Sea escort operations amid record Houthi attacks', source: 'BBC', time: '2h 15m ago', url: '#' },
+  { title: 'Israeli air force conducts largest-ever exercise simulating Iran strikes', source: 'Haaretz', time: '2h 40m ago', url: '#' },
+  { title: 'Hezbollah fires 80 rockets toward Galilee — IDF intercepts majority', source: 'Reuters', time: '3h ago', url: '#' },
+  { title: 'Jordan asks US to clarify role in any Israel-Iran military conflict', source: 'Arab News', time: '3h 20m ago', url: '#' },
+  { title: 'Iran\'s President Pezeshkian warns of "unimaginable" response to US strikes', source: 'IRNA', time: '4h ago', url: '#' },
+  { title: 'B-21 Raider bombers reportedly staged at Diego Garcia — satellite images', source: 'Planet Labs Analysis', time: '4h 30m ago', url: '#' },
+  { title: 'Turkey calls emergency NATO session on Middle East escalation', source: 'Anadolu Agency', time: '5h ago', url: '#' },
+  { title: 'Oil surges 4% as market prices in potential Strait of Hormuz closure', source: 'FT', time: '5h 45m ago', url: '#' },
+  { title: 'Pentagon refuses to confirm or deny B-2 mission over Persian Gulf', source: 'Defense One', time: '6h ago', url: '#' },
+]
+
+export default fallbackHeadlines
+</file>
+
+<file path="src/hooks/useNews.js">
+import { useState, useEffect } from 'react'
+import { fallbackHeadlines } from '../data/newsHeadlines'
+
+// To use live news, set your NewsAPI key here or in .env as VITE_NEWS_API_KEY
+// Get a free key at https://newsapi.org
+// Without a key, the app uses static fallback headlines.
+const NEWS_API_KEY = import.meta.env.VITE_NEWS_API_KEY || ''
+const NEWS_QUERY   = 'Israel Iran war missile OR airstrike OR strike'
+const REFRESH_MS   = 5 * 60 * 1000 // Refresh every 5 minutes
+
+export function useNews() {
+  const [headlines, setHeadlines] = useState(fallbackHeadlines)
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState(null)
+
+  useEffect(() => {
+    if (!NEWS_API_KEY) return // Use fallback silently
+
+    const fetchNews = async () => {
+      setLoading(true)
+      try {
+        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(NEWS_QUERY)}&sortBy=publishedAt&pageSize=30&apiKey=${NEWS_API_KEY}`
+        const res  = await fetch(url)
+        const data = await res.json()
+        if (data.status === 'ok' && data.articles?.length) {
+          setHeadlines(
+            data.articles.map((a) => ({
+              title:  a.title,
+              source: a.source?.name ?? 'Unknown',
+              time:   timeAgo(a.publishedAt),
+              url:    a.url,
+            }))
+          )
+        }
+      } catch (err) {
+        setError(err.message)
+        // Keep showing fallback
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchNews()
+    const id = setInterval(fetchNews, REFRESH_MS)
+    return () => clearInterval(id)
+  }, [])
+
+  return { headlines, loading, error }
+}
+
+function timeAgo(isoStr) {
+  const diff = Date.now() - new Date(isoStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1)   return 'just now'
+  if (mins < 60)  return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)   return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+</file>
+
+<file path="src/utils/colors.js">
+import { EVENT_TYPES, COUNTRIES } from '../data/events'
+
+export const TYPE_COLORS = {
+  [EVENT_TYPES.MISSILE]:   { primary: '#ff2222', glow: 'rgba(255,34,34,0.6)',   label: 'Missile / Rocket',  icon: '🚀' },
+  [EVENT_TYPES.AIRSTRIKE]: { primary: '#0088ff', glow: 'rgba(0,136,255,0.6)',   label: 'Airstrike',        icon: '✈️' },
+  [EVENT_TYPES.DRONE]:     { primary: '#ff8800', glow: 'rgba(255,136,0,0.6)',   label: 'Drone Attack',     icon: '🛸' },
+  [EVENT_TYPES.NAVAL]:     { primary: '#00ccff', glow: 'rgba(0,204,255,0.6)',   label: 'Naval Operation',  icon: '⚓' },
+  [EVENT_TYPES.DEFENSE]:   { primary: '#00ff88', glow: 'rgba(0,255,136,0.6)',   label: 'Defense / Diplomacy', icon: '🛡️' },
+  [EVENT_TYPES.GROUND]:    { primary: '#ffdd00', glow: 'rgba(255,221,0,0.6)',   label: 'Ground Operation', icon: '🪖' },
+}
+
+export const COUNTRY_COLORS = {
+  [COUNTRIES.IRAN]:      '#cc0000',
+  [COUNTRIES.ISRAEL]:    '#0055cc',
+  [COUNTRIES.USA]:       '#ffffff',
+  [COUNTRIES.HEZBOLLAH]: '#cc6600',
+  [COUNTRIES.HOUTHI]:    '#cc9900',
+  [COUNTRIES.IRAQ_PMF]:  '#884400',
+}
+
+export const IMPORTANCE_COLORS = {
+  critical: '#ff2222',
+  major:    '#ffaa00',
+  moderate: '#00ff41',
+  minor:    '#557755',
+}
+
+export function getTypeColor(type) {
+  return TYPE_COLORS[type]?.primary ?? '#00ff41'
+}
+
+export function getCountryColor(country) {
+  return COUNTRY_COLORS[country] ?? '#888888'
+}
+
+export function getImportanceColor(importance) {
+  return IMPORTANCE_COLORS[importance] ?? '#00ff41'
+}
+
+export function getTypeIcon(type) {
+  return TYPE_COLORS[type]?.icon ?? '📍'
+}
+</file>
+
+<file path="src/App.jsx">
+import { useState, useCallback } from 'react'
+import Globe3D from './components/Globe3D'
+import Timeline from './components/Timeline'
+import EventCard from './components/EventCard'
+import VideoModal from './components/VideoModal'
+import NewsFeed from './components/NewsFeed'
+import Legend from './components/Legend'
+import Header from './components/Header'
+import { events, TIMELINE_START } from './data/events'
+import { useSimulation } from './hooks/useSimulation'
+import { useNews } from './hooks/useNews'
+
+export default function App() {
+  const [mode, setMode]               = useState('live')           // 'live' | 'timeline'
+  const [selectedEvent, setSelected]  = useState(null)
+  const [showVideo, setShowVideo]     = useState(false)
+  const [currentTime, setCurrentTime] = useState(TIMELINE_START)
+  const [isPlaying, setIsPlaying]     = useState(true)
+  const [speed, setSpeed]             = useState(5)
+
+  const { activeEvents } = useSimulation({
+    mode, currentTime, isPlaying, speed, events, setCurrentTime,
+  })
+
+  const { headlines } = useNews()
+
+  const handleEventClick = useCallback((event) => {
+    setSelected(event)
+    setShowVideo(false)
+  }, [])
+
+  const handleWatchVideo = useCallback(() => {
+    setShowVideo(true)
+  }, [])
+
+  const handleCloseCard = useCallback(() => {
+    setSelected(null)
+    setShowVideo(false)
+  }, [])
+
+  return (
+    <div className="relative w-screen h-screen bg-black overflow-hidden">
+      {/* Full-screen Globe (behind everything) */}
+      <div className="absolute inset-0 z-0">
+        <Globe3D
+          events={events}
+          activeEvents={activeEvents}
+          selectedEvent={selectedEvent}
+          onEventClick={handleEventClick}
+        />
+      </div>
+
+      {/* News ticker (below header) */}
+      <NewsFeed headlines={headlines} />
+
+      {/* Top header */}
+      <Header mode={mode} onModeChange={(m) => { setMode(m); setSelected(null) }} />
+
+      {/* Right-side event card */}
+      {selectedEvent && !showVideo && (
+        <EventCard
+          event={selectedEvent}
+          onClose={handleCloseCard}
+          onWatchVideo={handleWatchVideo}
+        />
+      )}
+
+      {/* Video modal */}
+      {showVideo && selectedEvent && (
+        <VideoModal
+          event={selectedEvent}
+          onClose={() => setShowVideo(false)}
+        />
+      )}
+
+      {/* Bottom-left legend */}
+      <Legend />
+
+      {/* Event count badge (live mode) */}
+      {mode === 'live' && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 fade-in">
+          <div className="mil-panel border-glow px-4 py-2 text-center">
+            <div className="text-green-700 text-xs tracking-widest">ACTIVE OPERATIONS</div>
+            <div className="text-green-400 glow font-bold text-sm">
+              {activeEvents.length} arc{activeEvents.length !== 1 ? 's' : ''} tracked
+            </div>
+            <div className="text-green-800 text-xs mt-0.5">Click any arc or marker for details</div>
+          </div>
+        </div>
+      )}
+
+      {/* Timeline (only in timeline mode) */}
+      {mode === 'timeline' && (
+        <Timeline
+          events={events}
+          currentTime={currentTime}
+          isPlaying={isPlaying}
+          speed={speed}
+          onTimeChange={setCurrentTime}
+          onPlayPause={() => setIsPlaying((p) => !p)}
+          onSpeedChange={setSpeed}
+          onEventClick={handleEventClick}
+        />
+      )}
+
+      {/* Corner decoration */}
+      <div className="absolute bottom-4 left-4 z-20 text-green-900 text-xs pointer-events-none select-none">
+        <div>◈ DATA: OSINT / PUBLIC REPORTING</div>
+        <div>◈ SIMULATED EVENTS MARKED ◈</div>
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/index.css">
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --green: #00ff41;
+  --amber: #ffb000;
+  --red: #ff3333;
+  --blue: #0088ff;
+  --bg: #000000;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #000;
+  color: var(--green);
+  font-family: 'Courier New', Courier, monospace;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* CRT scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Green glow text utility */
+.glow {
+  text-shadow: 0 0 8px var(--green), 0 0 20px var(--green);
+}
+.glow-red {
+  text-shadow: 0 0 8px var(--red), 0 0 20px var(--red);
+}
+.glow-amber {
+  text-shadow: 0 0 8px var(--amber), 0 0 20px var(--amber);
+}
+.glow-blue {
+  text-shadow: 0 0 8px var(--blue), 0 0 20px var(--blue);
+}
+
+/* Border glow */
+.border-glow {
+  border: 1px solid rgba(0, 255, 65, 0.4);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.15), inset 0 0 10px rgba(0, 255, 65, 0.05);
+}
+.border-glow-red {
+  border: 1px solid rgba(255, 51, 51, 0.5);
+  box-shadow: 0 0 10px rgba(255, 51, 51, 0.2), inset 0 0 10px rgba(255, 51, 51, 0.05);
+}
+
+/* Military panel background */
+.mil-panel {
+  background: rgba(0, 8, 0, 0.88);
+  backdrop-filter: blur(4px);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #000;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 65, 0.4);
+}
+
+/* Pulse dot animation */
+@keyframes ping-green {
+  0% { transform: scale(1); opacity: 1; }
+  75%, 100% { transform: scale(2.5); opacity: 0; }
+}
+@keyframes ping-red {
+  0% { transform: scale(1); opacity: 1; }
+  75%, 100% { transform: scale(2.5); opacity: 0; }
+}
+
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  animation: ping-green 1.5s ease-out infinite;
+}
+
+/* News ticker */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(100vw); }
+  100% { transform: translateX(-100%); }
+}
+.ticker-track {
+  animation: ticker-scroll 80s linear infinite;
+  white-space: nowrap;
+  display: inline-block;
+}
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* Range input styling */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: rgba(0, 255, 65, 0.2);
+  border-radius: 2px;
+  outline: none;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--green);
+  cursor: pointer;
+  box-shadow: 0 0 6px var(--green);
+}
+
+/* Event marker on globe */
+.event-label {
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(0, 255, 65, 0.5);
+  color: #00ff41;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 0 6px #00ff41;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+</file>
+
+<file path="src/main.jsx">
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.jsx'
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+)
+</file>
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>THEATER MAP — IL/IR/US CONFLICT</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="package.json">
+{
+  "name": "war-theater-map",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-globe.gl": "^2.27.2",
+    "three": "^0.167.1",
+    "date-fns": "^3.6.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.9",
+    "vite": "^5.4.1"
+  }
+}
+</file>
+
+<file path="postcss.config.js">
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+</file>
+
+<file path="stan.ipynb">
+{
+ "nbformat": 4,
+ "nbformat_minor": 5,
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.10.0"
+  }
+ },
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "a1b2c3d4-0001",
+   "metadata": {},
+   "source": [
+    "# IL / IR / US War Theater Map\n",
+    "### Interactive 3D OSINT Conflict Visualization\n",
+    "\n",
+    "**Run the cell below** to launch the full interactive 3D globe. No npm, no build step needed.\n",
+    "\n",
+    "| Feature | Description |\n",
+    "|---|---|\n",
+    "| 3D Globe | Night-Earth satellite texture, starfield, military-green atmosphere |\n",
+    "| LIVE Mode | Animates 3 random events simultaneously, cycles every 3.5s |\n",
+    "| TIMELINE Mode | Scrub Jan 2024 to Apr 2026, Play/Pause, 1x/5x/20x/100x speed |\n",
+    "| Animated Arcs | Color-coded: red=missile, blue=airstrike, orange=drone, cyan=naval |\n",
+    "| Event Cards | Click any arc or marker for full details panel on the right |\n",
+    "| Video | Click WATCH VIDEO FOOTAGE to search YouTube for event footage |\n",
+    "| News Ticker | Scrolling OSINT headlines in the top bar |\n",
+    "| 23 Events | Jan 2024 to Aug 2025 sourced, last 3 marked as projected scenarios |\n",
+    "\n",
+    "**Controls:** Drag to rotate, scroll to zoom, click arc/dot to select event, Esc to close video"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a1b2c3d4-0002",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import threading, http.server, socket, os, time\n",
+    "from IPython.display import IFrame, display\n",
+    "\n",
+    "# Jupyter's HTML sanitizer strips <script> tags, so display(HTML(...)) breaks WebGL apps.\n",
+    "# Fix: spin up a tiny local HTTP server (daemon thread) so the file is served over\n",
+    "# a real http:// URL — the IFrame loads it as a proper page with full script support.\n",
+    "\n",
+    "def _free_port():\n",
+    "    with socket.socket() as s:\n",
+    "        s.bind(('', 0))\n",
+    "        return s.getsockname()[1]\n",
+    "\n",
+    "_serve_dir = os.path.abspath('.')\n",
+    "_port      = _free_port()\n",
+    "\n",
+    "class _Handler(http.server.SimpleHTTPRequestHandler):\n",
+    "    def __init__(self, *a, **kw):\n",
+    "        super().__init__(*a, directory=_serve_dir, **kw)\n",
+    "    def log_message(self, *a):\n",
+    "        pass  # silence request logs\n",
+    "\n",
+    "threading.Thread(\n",
+    "    target=lambda: http.server.HTTPServer(('127.0.0.1', _port), _Handler).serve_forever(),\n",
+    "    daemon=True   # dies automatically when the Jupyter kernel shuts down\n",
+    ").start()\n",
+    "\n",
+    "time.sleep(0.4)  # let the server bind before the iframe requests the file\n",
+    "\n",
+    "url = f'http://127.0.0.1:{_port}/war_map.html'\n",
+    "print(f'Serving from: {_serve_dir}')\n",
+    "print(f'Globe URL   : {url}')\n",
+    "display(IFrame(url, width='100%', height=880))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a1b2c3d4-0003",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## OSINT Events Dataset\n",
+    "All 23 events plotted on the globe. Run the cell below to see the full structured dataset."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a1b2c3d4-0004",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "events = [\n",
+    "    {\"id\":1,  \"date\":\"2024-01-12\", \"title\":\"Operation Prosperity Guardian\",          \"type\":\"airstrike\", \"actor\":\"USA\",       \"importance\":\"major\",    \"sim\":False},\n",
+    "    {\"id\":2,  \"date\":\"2024-01-28\", \"title\":\"Tower 22 Drone Strike\",                  \"type\":\"drone\",     \"actor\":\"Iraq PMF\",  \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":3,  \"date\":\"2024-02-02\", \"title\":\"Op Inherent Resolve Retaliation\",        \"type\":\"airstrike\", \"actor\":\"USA\",       \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":4,  \"date\":\"2024-04-01\", \"title\":\"Strike on Iranian Consulate Damascus\",   \"type\":\"airstrike\", \"actor\":\"Israel\",    \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":5,  \"date\":\"2024-04-13\", \"title\":\"Operation True Promise\",                \"type\":\"missile\",   \"actor\":\"Iran\",      \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":6,  \"date\":\"2024-04-14\", \"title\":\"Houthi Coordinated Salvo\",              \"type\":\"missile\",   \"actor\":\"Houthi\",    \"importance\":\"major\",    \"sim\":False},\n",
+    "    {\"id\":7,  \"date\":\"2024-04-19\", \"title\":\"Israeli Strike - Isfahan\",              \"type\":\"drone\",     \"actor\":\"Israel\",    \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":8,  \"date\":\"2024-07-27\", \"title\":\"Majdal Shams Massacre\",                \"type\":\"missile\",   \"actor\":\"Hezbollah\", \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":9,  \"date\":\"2024-09-17\", \"title\":\"Pager Operation\",                      \"type\":\"ground\",    \"actor\":\"Israel\",    \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":10, \"date\":\"2024-09-27\", \"title\":\"Nasrallah Eliminated\",                 \"type\":\"airstrike\", \"actor\":\"Israel\",    \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":11, \"date\":\"2024-10-01\", \"title\":\"IDF Ground Invasion - Lebanon\",         \"type\":\"ground\",    \"actor\":\"Israel\",    \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":12, \"date\":\"2024-10-01\", \"title\":\"Operation True Promise II\",            \"type\":\"missile\",   \"actor\":\"Iran\",      \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":13, \"date\":\"2024-10-15\", \"title\":\"USS Abraham Lincoln Enters Gulf\",       \"type\":\"naval\",     \"actor\":\"USA\",       \"importance\":\"major\",    \"sim\":False},\n",
+    "    {\"id\":14, \"date\":\"2024-10-26\", \"title\":\"Operation Days of Repentance\",         \"type\":\"airstrike\", \"actor\":\"Israel\",    \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":15, \"date\":\"2024-11-26\", \"title\":\"Lebanon Ceasefire\",                    \"type\":\"defense\",   \"actor\":\"USA\",       \"importance\":\"major\",    \"sim\":False},\n",
+    "    {\"id\":16, \"date\":\"2025-01-19\", \"title\":\"Gaza Ceasefire - Phase 1\",             \"type\":\"defense\",   \"actor\":\"USA\",       \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":17, \"date\":\"2025-03-18\", \"title\":\"Gaza Ceasefire Collapses\",             \"type\":\"airstrike\", \"actor\":\"Israel\",    \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":18, \"date\":\"2025-04-12\", \"title\":\"US-Iran Nuclear Talks - Oman\",         \"type\":\"defense\",   \"actor\":\"USA\",       \"importance\":\"major\",    \"sim\":False},\n",
+    "    {\"id\":19, \"date\":\"2025-05-05\", \"title\":\"US Strikes Houthi Capital\",            \"type\":\"airstrike\", \"actor\":\"USA\",       \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":20, \"date\":\"2025-08-20\", \"title\":\"Israeli Strike - Natanz Facility\",     \"type\":\"airstrike\", \"actor\":\"Israel\",    \"importance\":\"critical\", \"sim\":False},\n",
+    "    {\"id\":21, \"date\":\"2026-01-15\", \"title\":\"Operation True Promise III [PROJ]\",    \"type\":\"missile\",   \"actor\":\"Iran\",      \"importance\":\"critical\", \"sim\":True},\n",
+    "    {\"id\":22, \"date\":\"2026-03-08\", \"title\":\"US & Israel Joint Strike IRGC [PROJ]\", \"type\":\"airstrike\", \"actor\":\"USA\",       \"importance\":\"critical\", \"sim\":True},\n",
+    "    {\"id\":23, \"date\":\"2026-04-10\", \"title\":\"USS Carl Vinson - Hormuz [PROJ]\",      \"type\":\"naval\",     \"actor\":\"USA\",       \"importance\":\"critical\", \"sim\":True},\n",
+    "]\n",
+    "\n",
+    "from collections import Counter\n",
+    "print(f'Total events : {len(events)}')\n",
+    "print(f'Date range   : {events[0][\"date\"]} to {events[-1][\"date\"]}')\n",
+    "print(f'Confirmed    : {sum(1 for e in events if not e[\"sim\"])} / Projected: {sum(1 for e in events if e[\"sim\"])}')\n",
+    "print(f'Critical     : {sum(1 for e in events if e[\"importance\"]==\"critical\")}')\n",
+    "print()\n",
+    "print('By type :', dict(Counter(e['type'] for e in events)))\n",
+    "print('By actor:', dict(Counter(e['actor'] for e in events)))\n",
+    "print()\n",
+    "print(f'{\"ID\":<4} {\"DATE\":<12} {\"ACTOR\":<12} {\"TYPE\":<10} {\"IMP\":<10} {\"SIM\":<5} TITLE')\n",
+    "print('-'*90)\n",
+    "for e in events:\n",
+    "    print(f'{e[\"id\"]:<4} {e[\"date\"]:<12} {e[\"actor\"]:<12} {e[\"type\"]:<10} {e[\"importance\"]:<10} {\"[P]\" if e[\"sim\"] else \"   \"}   {e[\"title\"]}')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a1b2c3d4-0005",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## News Headlines Feed\n",
+    "These scroll in the ticker at the top of the globe. The React version can connect to NewsAPI.org for live headlines via `VITE_NEWS_API_KEY` in `.env`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a1b2c3d4-0006",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "headlines = [\n",
+    "    (\"Reuters\",        \"Israel signals readiness for further strikes if nuclear talks fail\"),\n",
+    "    (\"AP\",             \"Iran enriches uranium to 84% purity - IAEA gravely concerned\"),\n",
+    "    (\"Defense News\",   \"US deploys additional THAAD battery to Israel amid Iran tensions\"),\n",
+    "    (\"Lloyd's List\",   \"Houthi attack damages Singapore-flagged tanker in Red Sea\"),\n",
+    "    (\"Times of Israel\",\"Netanyahu: military option against Iran remains on the table\"),\n",
+    "    (\"Al Jazeera\",     \"Iran supreme leader warns of consequences of further Israeli strikes\"),\n",
+    "    (\"WSJ\",            \"US-Iran Oman talks stall over enrichment caps\"),\n",
+    "    (\"IDF\",            \"300+ rockets fired from Gaza since ceasefire collapsed\"),\n",
+    "    (\"NYT\",            \"Russia reportedly shares satellite intelligence with Iran\"),\n",
+    "    (\"Bloomberg\",      \"Saudi Arabia warns regional war could spike oil to $200/barrel\"),\n",
+    "    (\"Tasnim\",         \"IRGC test-fires Fatah-2 hypersonic in Persian Gulf exercise\"),\n",
+    "    (\"BBC\",            \"UK joins US in Red Sea escort operations amid record Houthi attacks\"),\n",
+    "    (\"Haaretz\",        \"Israel conducts largest-ever exercise simulating Iran strikes\"),\n",
+    "    (\"Reuters\",        \"Hezbollah fires 80 rockets toward Galilee - IDF intercepts majority\"),\n",
+    "    (\"FT\",             \"Oil surges 4% on potential Strait of Hormuz closure fears\"),\n",
+    "    (\"Pentagon\",       \"USS Carl Vinson combat-ready in Persian Gulf\"),\n",
+    "    (\"IRNA\",           \"Iran announces new missile with 2,000km range\"),\n",
+    "    (\"Axios\",          \"Israel preparing 'day after' plan for Iran nuclear program\"),\n",
+    "]\n",
+    "\n",
+    "print(f'{\"SOURCE\":<18} HEADLINE')\n",
+    "print('-'*80)\n",
+    "for src, line in headlines:\n",
+    "    print(f'[{src}]{\" \"*(16-len(src))} {line}')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a1b2c3d4-0007",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## Project Structure\n",
+    "\n",
+    "```\n",
+    "stam/\n",
+    "  war_map.html          <- Standalone globe (CDN, no build needed)\n",
+    "  stan.ipynb            <- This notebook\n",
+    "  package.json          <- React/Vite version\n",
+    "  src/\n",
+    "    App.jsx             <- Main layout & state\n",
+    "    components/\n",
+    "      Globe3D.jsx       <- react-globe.gl wrapper\n",
+    "      Timeline.jsx      <- Scrubber + play controls\n",
+    "      EventCard.jsx     <- Right-panel event details\n",
+    "      VideoModal.jsx    <- YouTube embed modal\n",
+    "      NewsFeed.jsx      <- Scrolling news ticker\n",
+    "      Header.jsx        <- Top bar + mode toggle\n",
+    "      Legend.jsx        <- Arc type legend\n",
+    "    data/\n",
+    "      events.js         <- 23 OSINT events\n",
+    "      newsHeadlines.js  <- Fallback headlines\n",
+    "    hooks/\n",
+    "      useSimulation.js  <- Live/timeline animation\n",
+    "      useNews.js        <- NewsAPI fetching\n",
+    "    utils/colors.js\n",
+    "```\n",
+    "\n",
+    "**React version (full features):**\n",
+    "```bash\n",
+    "npm install && npm run dev\n",
+    "```\n",
+    "\n",
+    "**Add live news headlines:**\n",
+    "```bash\n",
+    "echo 'VITE_NEWS_API_KEY=your_key' > .env\n",
+    "```"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a1b2c3d4-0008",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## YouTube Video ID Scraper\n",
+    "Run this cell once to scrape real YouTube video IDs for each event.\n",
+    "Results are saved to `video_ids.json` and loaded automatically by the globe.\n",
+    "After running, **re-run the globe cell above** to reload the map — embedded video will now work inside the app."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "id": "a1b2c3d4-0009",
+   "metadata": {},
+   "source": [
+    "import requests, re, json, time\n",
+    "\n",
+    "QUERIES = {\n",
+    "    1:  'Tower 22 drone attack Jordan US soldiers killed 2024',\n",
+    "    2:  'US airstrike Iraq Syria retaliation Tower 22 February 2024',\n",
+    "    3:  'Israel strike Iranian consulate Damascus April 2024 IRGC generals',\n",
+    "    4:  'Operation True Promise Iran missile attack Israel April 13 2024',\n",
+    "    5:  'Houthi missiles Israel April 14 2024 coordinated attack',\n",
+    "    6:  'Israel drone strike Isfahan Iran April 19 2024',\n",
+    "    7:  'Majdal Shams Hezbollah rocket attack children killed July 2024',\n",
+    "    8:  'US UK strikes Yemen Houthi January 12 2024 Operation Prosperity Guardian',\n",
+    "    9:  'Lebanon pager explosion Hezbollah September 17 2024',\n",
+    "    10: 'Israel kills Hassan Nasrallah Hezbollah Beirut September 2024',\n",
+    "    11: 'IDF ground invasion Lebanon October 2024 Hezbollah',\n",
+    "    12: 'Operation True Promise 2 Iran missile attack Israel October 2024',\n",
+    "    13: 'USS Abraham Lincoln Persian Gulf three carrier deployment Middle East 2024',\n",
+    "    14: 'Israel strikes Iran October 26 2024 missile production air defense',\n",
+    "    15: 'Lebanon ceasefire November 2024 Israel Hezbollah US brokered',\n",
+    "    16: 'Gaza ceasefire January 2025 hostages Hamas Israel Qatar',\n",
+    "    17: 'Israel resumes Gaza operation March 2025 ceasefire collapse',\n",
+    "    18: 'US Iran nuclear talks Oman 2025 Witkoff Araghchi',\n",
+    "    19: 'US B-2 bomber Houthi Sanaa strike 2025 bunker buster',\n",
+    "    20: 'Israel strikes Natanz nuclear facility Iran 2025',\n",
+    "}\n",
+    "\n",
+    "HEADERS = {\n",
+    "    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '\n",
+    "                  'AppleWebKit/537.36 (KHTML, like Gecko) '\n",
+    "                  'Chrome/124.0.0.0 Safari/537.36',\n",
+    "    'Accept-Language': 'en-US,en;q=0.9',\n",
+    "}\n",
+    "\n",
+    "video_ids = {}\n",
+    "for ev_id, query in QUERIES.items():\n",
+    "    try:\n",
+    "        url = 'https://www.youtube.com/results?search_query=' + requests.utils.quote(query)\n",
+    "        r = requests.get(url, headers=HEADERS, timeout=12)\n",
+    "        ids = re.findall(r'\"videoId\":\"([a-zA-Z0-9_\\-]{11})\"', r.text)\n",
+    "        # Filter out channel/playlist IDs (appear in 'browseId' context)\n",
+    "        if ids:\n",
+    "            video_ids[str(ev_id)] = ids[0]\n",
+    "            print(f'  Event {ev_id:2d}: {ids[0]}  — {query[:55]}')\n",
+    "        else:\n",
+    "            print(f'  Event {ev_id:2d}: no results for \"{query[:50]}\"')\n",
+    "        time.sleep(1.2)  # polite delay\n",
+    "    except Exception as e:\n",
+    "        print(f'  Event {ev_id:2d}: ERROR — {e}')\n",
+    "\n",
+    "with open('video_ids.json', 'w') as f:\n",
+    "    json.dump(video_ids, f, indent=2)\n",
+    "\n",
+    "print(f'\\nSaved {len(video_ids)}/{len(QUERIES)} IDs to video_ids.json')\n",
+    "print('Re-run the globe cell above to enable embedded video playback.')\n"
+   ],
+   "outputs": [],
+   "execution_count": null
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a1b2c3d4-0010",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## מדריך Git — שלושת הפקודות הבסיסיות\n",
+    "\n",
+    "כל פרויקט מתחיל בשלושה שלבים:\n",
+    "\n",
+    "### 1. `git add .`\n",
+    "מוסיף את **כל הקבצים שהשתנו** ל-\"staging area\" — הרשימה של מה שיכנס ל-commit.\n",
+    "הנקודה (`.`) אומרת: \"הכל בתיקייה הנוכחית\".\n",
+    "\n",
+    "```bash\n",
+    "git add .          # הוסף הכל\n",
+    "git add index.html # או רק קובץ ספציפי\n",
+    "```\n",
+    "\n",
+    "### 2. `git commit -m \"תיאור\"`\n",
+    "**שומר snapshot** של השינויים עם הודעה שמסבירה מה עשית.\n",
+    "ה-commit הוא כמו \"שמירה\" בתוך ההיסטוריה של הפרויקט — אפשר תמיד לחזור אליו.\n",
+    "\n",
+    "```bash\n",
+    "git commit -m \"add war map initial version\"\n",
+    "```\n",
+    "\n",
+    "> ✅ כלל אצבע: commit אחד = שינוי אחד ברור. לא 10 דברים ביחד.\n",
+    "\n",
+    "### 3. `git push origin main`\n",
+    "**מעלה את ה-commits** מהמחשב שלך ל-GitHub.\n",
+    "- `origin` = השם של ה-remote (GitHub)\n",
+    "- `main` = שם ה-branch\n",
+    "\n",
+    "```bash\n",
+    "git push origin main\n",
+    "```\n",
+    "\n",
+    "### 4. `git pull`\n",
+    "**מוריד שינויים** מ-GitHub למחשב שלך (כשמישהו אחר דחף קוד, או כשעבדת ממחשב אחר).\n",
+    "\n",
+    "```bash\n",
+    "git pull           # מוריד ומיזג אוטומטית\n",
+    "```\n",
+    "\n",
+    "---\n",
+    "\n",
+    "### זרימת עבודה יומיומית\n",
+    "\n",
+    "```\n",
+    "┌─────────────────────────────────────────────────────┐\n",
+    "│  שינית קבצים?                                       │\n",
+    "│                                                     │\n",
+    "│   git add .                                         │\n",
+    "│   git commit -m \"מה שינית ולמה\"                    │\n",
+    "│   git push origin main                              │\n",
+    "│                                                     │\n",
+    "│  חוזר על עצמו בכל פעם שרוצים לשמור את העבודה.     │\n",
+    "└─────────────────────────────────────────────────────┘\n",
+    "```\n",
+    "\n",
+    "| פקודה | מה היא עושה |\n",
+    "|---|---|\n",
+    "| `git add .` | מסמן מה נכנס ל-commit |\n",
+    "| `git commit -m \"...\"` | שומר snapshot עם הודעה |\n",
+    "| `git push origin main` | מעלה ל-GitHub |\n",
+    "| `git pull` | מוריד שינויים מ-GitHub |"
+   ]
+  }
+ ]
+}
+</file>
+
+<file path="tailwind.config.js">
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx}'],
+  theme: {
+    extend: {
+      fontFamily: {
+        mono: ['Courier New', 'Courier', 'monospace'],
+      },
+      colors: {
+        military: {
+          green: '#00ff41',
+          amber: '#ffb000',
+          red: '#ff2222',
+          blue: '#0088ff',
+          dim: '#003300',
+        },
+      },
+      animation: {
+        'pulse-fast': 'pulse 0.8s cubic-bezier(0.4,0,0.6,1) infinite',
+        'scan': 'scan 3s linear infinite',
+        'ticker': 'ticker 60s linear infinite',
+        'blink': 'blink 1s step-end infinite',
+      },
+      keyframes: {
+        scan: {
+          '0%': { top: '0%' },
+          '100%': { top: '100%' },
+        },
+        ticker: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(-100%)' },
+        },
+        blink: {
+          '0%, 100%': { opacity: 1 },
+          '50%': { opacity: 0 },
+        },
+      },
+    },
+  },
+  plugins: [],
+}
+</file>
+
+<file path="vite.config.js">
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  optimizeDeps: {
+    include: ['react-globe.gl', 'three'],
+  },
+})
+</file>
+
+<file path="src/components/Timeline.jsx">
+import { format } from 'date-fns'
+import { getImportanceColor } from '../utils/colors'
+
+export default function Timeline({
+  events,
+  currentTime,
+  isPlaying,
+  speed,
+  startTime,
+  endTime,
+  onTimeChange,
+  onPlayPause,
+  onSpeedChange,
+  onEventClick,
+}) {
+  const totalDuration  = endTime - startTime
+  const progress       = Math.max(0, Math.min(1, (currentTime - startTime) / totalDuration))
+  const sliderValue    = Math.round(progress * 1000)
+
+  const handleScrub = (e) => {
+    onTimeChange(startTime + (Number(e.target.value) / 1000) * totalDuration)
+  }
+
+  // Only show events within the active campaign window
+  const visibleEvents = events.filter((ev) => ev.timestamp >= startTime && ev.timestamp <= endTime)
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 z-30">
+      <div className="mil-panel border-glow">
+        {/* Event dots row */}
+        <div className="relative h-5 mx-4 mt-2">
+          {visibleEvents.map((ev) => {
+            const pct      = ((ev.timestamp - startTime) / totalDuration) * 100
+            const isActive = ev.timestamp <= currentTime && ev.timestamp >= currentTime - 12 * 3600_000
+            const color    = getImportanceColor(ev.importance)
+            return (
+              <button
+                key={ev.id}
+                onClick={() => { onTimeChange(ev.timestamp); onEventClick(ev) }}
+                title={ev.title}
+                className="absolute -translate-x-1/2 transition-all hover:scale-150"
+                style={{ left: `${pct}%`, bottom: 0 }}
+              >
+                <span
+                  className="block rounded-full"
+                  style={{
+                    width:     ev.importance === 'critical' ? 8 : 5,
+                    height:    ev.importance === 'critical' ? 8 : 5,
+                    background: isActive ? color : `${color}55`,
+                    boxShadow:  isActive ? `0 0 6px ${color}` : 'none',
+                  }}
+                />
+              </button>
+            )
+          })}
+          {/* Playhead */}
+          <div
+            className="absolute bottom-0 top-0 w-px bg-green-400 pointer-events-none"
+            style={{ left: `${progress * 100}%`, boxShadow: '0 0 6px #00ff41' }}
+          />
+        </div>
+
+        {/* Scrubber */}
+        <div className="px-4 py-1">
+          <input
+            type="range"
+            min={0}
+            max={1000}
+            value={sliderValue}
+            onChange={handleScrub}
+            className="w-full"
+          />
+        </div>
+
+        {/* Controls row */}
+        <div className="px-4 pb-3 flex items-center gap-4">
+          {/* Play/Pause */}
+          <button
+            onClick={onPlayPause}
+            className="text-green-400 glow text-lg w-7 h-7 flex items-center justify-center border border-green-800 rounded hover:border-green-400"
+          >
+            {isPlaying ? '⏸' : '▶'}
+          </button>
+
+          {/* Speed */}
+          <div className="flex items-center gap-1">
+            {[1, 5, 20, 100].map((s) => (
+              <button
+                key={s}
+                onClick={() => onSpeedChange(s)}
+                className={`text-xs px-2 py-0.5 rounded border transition-all ${
+                  speed === s
+                    ? 'border-green-500 text-green-300 bg-green-950'
+                    : 'border-green-900 text-green-700 hover:border-green-700'
+                }`}
+              >
+                {s}×
+              </button>
+            ))}
+          </div>
+
+          {/* Current date display */}
+          <div className="flex-1 text-center">
+            <span className="text-green-500 text-sm glow tabular-nums font-bold">
+              {format(new Date(currentTime), 'dd MMM yyyy HH:mm')} UTC
+            </span>
+          </div>
+
+          {/* Campaign date range labels */}
+          <div className="flex items-center gap-4 text-green-800 text-xs">
+            <span>{format(new Date(startTime), 'dd MMM yyyy')}</span>
+            <span>──</span>
+            <span>{format(new Date(endTime), 'dd MMM yyyy')}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+</file>
+
+<file path="src/data/events.js">
+// OSINT-based events — Israel / Iran / USA conflict theater
+// All events sourced from public reporting (Reuters, BBC, Al Jazeera, AP, Times of Israel)
+
+export const EVENT_TYPES = {
+  MISSILE:    'missile',
+  AIRSTRIKE:  'airstrike',
+  DRONE:      'drone',
+  NAVAL:      'naval',
+  DEFENSE:    'defense',
+  GROUND:     'ground',
+}
+
+export const COUNTRIES = {
+  IRAN:     'Iran',
+  ISRAEL:   'Israel',
+  USA:      'USA',
+  HEZBOLLAH:'Hezbollah',
+  HOUTHI:   'Houthi',
+  IRAQ_PMF: 'Iraq PMF',
+}
+
+// Geographic locations (lat/lng)
+const LOC = {
+  TEHRAN:         { lat: 35.6892,  lng: 51.3890,  label: 'Tehran, Iran' },
+  ISFAHAN:        { lat: 32.6546,  lng: 51.6680,  label: 'Isfahan, Iran' },
+  TABRIZ:         { lat: 38.0962,  lng: 46.2738,  label: 'Tabriz, Iran' },
+  BANDAR_ABBAS:   { lat: 27.1865,  lng: 56.2808,  label: 'Bandar Abbas, Iran' },
+  KHARG_ISLAND:   { lat: 29.2452,  lng: 50.3241,  label: 'Kharg Island, Iran' },
+  JERUSALEM:      { lat: 31.7683,  lng: 35.2137,  label: 'Jerusalem, Israel' },
+  TEL_AVIV:       { lat: 32.0853,  lng: 34.7818,  label: 'Tel Aviv, Israel' },
+  HAIFA:          { lat: 32.7940,  lng: 34.9896,  label: 'Haifa, Israel' },
+  NEVATIM:        { lat: 31.2077,  lng: 35.0127,  label: 'Nevatim Air Base, Israel' },
+  DIMONA:         { lat: 31.0748,  lng: 35.1536,  label: 'Dimona Nuclear Site' },
+  RAMAT_DAVID:    { lat: 32.6651,  lng: 35.1795,  label: 'Ramat David Air Base' },
+  BEIRUT:         { lat: 33.8938,  lng: 35.5018,  label: 'Beirut, Lebanon' },
+  SOUTHERN_LEB:   { lat: 33.2700,  lng: 35.2000,  label: 'South Lebanon' },
+  DAMASCUS:       { lat: 33.5138,  lng: 36.2765,  label: 'Damascus, Syria' },
+  SANAA:          { lat: 15.3694,  lng: 44.1910,  label: "Sana'a, Yemen" },
+  HODEIDAH:       { lat: 14.7979,  lng: 42.9547,  label: 'Hodeidah, Yemen' },
+  BAGHDAD:        { lat: 33.3152,  lng: 44.3661,  label: 'Baghdad, Iraq' },
+  TOWER22:        { lat: 32.5000,  lng: 38.5000,  label: 'Tower 22, Jordan' },
+  ALTANF:         { lat: 33.4625,  lng: 38.6453,  label: 'Al-Tanf, Syria' },
+  USS_FORD:       { lat: 35.5,     lng: 26.0,     label: 'USS Gerald R. Ford (Med)' },
+  USS_IKE:        { lat: 15.0,     lng: 43.0,     label: 'USS Eisenhower (Red Sea)' },
+  USS_LINCOLN:    { lat: 26.0,     lng: 57.0,     label: 'USS Abraham Lincoln (Gulf)' },
+  RED_SEA:        { lat: 18.0,     lng: 39.0,     label: 'Red Sea Corridor' },
+  GULF_ADEN:      { lat: 12.5,     lng: 45.0,     label: 'Gulf of Aden' },
+  GULF:           { lat: 27.0,     lng: 52.0,     label: 'Persian Gulf' },
+  DIEGO_GARCIA:   { lat: -7.3195,  lng: 72.4236,  label: 'Diego Garcia (B-2 Base)' },
+}
+
+const ts = (dateStr) => new Date(dateStr).getTime()
+
+export const TIMELINE_START = ts('2023-10-07T06:30:00Z')
+export const TIMELINE_END   = ts('2026-04-17T00:00:00Z')
+
+export const campaigns = [
+  { id: 'all',               name: 'Global Timeline (Iron Swords)',    start: TIMELINE_START,              end: TIMELINE_END },
+  { id: 'days-of-repentance',name: 'Operation Days of Repentance',     start: ts('2024-10-20T00:00:00Z'),  end: ts('2024-10-30T00:00:00Z') },
+  { id: 'northern-arrows',   name: 'Northern Arrows',                  start: ts('2024-09-15T00:00:00Z'),  end: ts('2024-11-30T00:00:00Z') },
+]
+
+export const events = [
+  // ── JAN 2024 ──────────────────────────────────────────────────────────────
+  {
+    id: 1,
+    date: '2024-01-28',
+    timestamp: ts('2024-01-28T04:30:00Z'),
+    title: 'Tower 22 Drone Strike',
+    subtitle: 'Iran-backed militia kills 3 US soldiers in Jordan',
+    description:
+      'An Iran-backed Iraqi militia (Islamic Resistance in Iraq) launched a one-way attack drone that struck US base Tower 22 near the Syrian border in Jordan. Three US Army Reserve soldiers were killed and 47 wounded — the first US combat deaths in the region since the October 7 escalation. The Biden administration blamed Iran-aligned groups.',
+    type: EVENT_TYPES.DRONE,
+    importance: 'critical',
+    origin: { ...LOC.BAGHDAD },
+    targets: [LOC.TOWER22],
+    country: COUNTRIES.IRAQ_PMF,
+    casualties: '3 US KIA, 47 WIA',
+    source: 'Reuters, AP, DoD',
+    searchQuery: 'Tower 22 drone attack Jordan US soldiers killed 2024',
+    tags: ['Iraq', 'USA', 'drone', 'Tower 22', 'Jordan'],
+    arcAltitude: 0.12,
+    arcSpeed: 3500,
+    arcColor: ['#ff6600', '#ff0000'],
+  },
+
+  {
+    id: 2,
+    date: '2024-02-02',
+    timestamp: ts('2024-02-02T22:00:00Z'),
+    title: 'Operation Inherent Resolve Retaliation',
+    subtitle: 'US strikes 85 Iran-linked targets across Iraq & Syria',
+    description:
+      'Following the Tower 22 attack, the US launched a multi-wave retaliatory operation striking 85 targets in Iraq and Syria linked to Iran\'s IRGC and affiliated militias. B-1B Lancer bombers deployed from the continental US dropped 125 precision munitions. Targets included command-and-control, intelligence, rocket/missile storage, and logistics facilities.',
+    type: EVENT_TYPES.AIRSTRIKE,
+    importance: 'critical',
+    origin: { ...LOC.USS_FORD, label: 'US Bases (CONUS + Mediterranean)' },
+    targets: [LOC.BAGHDAD, LOC.DAMASCUS, LOC.ALTANF],
+    country: COUNTRIES.USA,
+    casualties: 'Unknown (militia casualties reported)',
+    source: 'Pentagon, Reuters, BBC',
+    searchQuery: 'US airstrike Iraq Syria retaliation Tower 22 February 2024',
+    tags: ['USA', 'Iraq', 'Syria', 'B-1B', 'airstrike', 'IRGC'],
+    arcAltitude: 0.35,
+    arcSpeed: 1800,
+    arcColor: ['#ffffff', '#aaddff'],
+  },
+
+  // ── APRIL 2024 ─────────────────────────────────────────────────────────────
+  {
+    id: 3,
+    date: '2024-04-01',
+    timestamp: ts('2024-04-01T13:00:00Z'),
+    title: 'Israeli Strike on Iranian Consulate',
+    subtitle: 'F-35 airstrike destroys IRGC compound in Damascus',
+    description:
+      'Israeli F-35 jets struck the Iranian consular annex in Damascus, killing 16 people including two senior IRGC Quds Force generals — Brig. Gen. Mohammad Reza Zahedi and Brig. Gen. Mohammad Hadi Haji Rahimi. The strike, Israel\'s most direct hit on an Iranian diplomatic site, triggered Iran\'s vow of direct retaliation.',
+    type: EVENT_TYPES.AIRSTRIKE,
+    importance: 'critical',
+    origin: { ...LOC.NEVATIM },
+    targets: [LOC.DAMASCUS],
+    country: COUNTRIES.ISRAEL,
+    casualties: '16 killed (2 IRGC generals)',
+    source: 'Reuters, Times of Israel, IRNA',
+    searchQuery: 'Israel strike Iranian consulate Damascus April 2024 IRGC generals',
+    tags: ['Israel', 'Iran', 'Damascus', 'IRGC', 'F-35', 'Syria'],
+    arcAltitude: 0.25,
+    arcSpeed: 1500,
+    arcColor: ['#0044ff', '#00aaff'],
+  },
+
+  {
+    id: 4,
+    date: '2024-04-13',
+    timestamp: ts('2024-04-13T23:30:00Z'),
+    title: '⚡ OPERATION TRUE PROMISE',
+    subtitle: 'Iran fires 170 drones + 120 ballistic missiles at Israel',
+    description:
+      'Iran launched its first-ever direct attack on Israeli territory: approximately 170 Shahed-136 kamikaze drones, 30 cruise missiles, and 120 ballistic missiles (including Emad and Ghadr variants). The attack was coordinated from Iran, Iraq, Yemen, and Lebanon. The US, UK, France, and Jordan assisted Israel\'s Iron Dome, David\'s Sling, and Arrow-3 systems intercept over 99% of projectiles. One Bedouin girl was injured.',
+    type: EVENT_TYPES.MISSILE,
+    importance: 'critical',
+    origin: { ...LOC.TEHRAN },
+    targets: [LOC.NEVATIM, LOC.JERUSALEM, LOC.TEL_AVIV],
+    country: COUNTRIES.IRAN,
+    casualties: '1 civilian injured; >99% intercepted',
+    source: 'IDF, Reuters, Al Jazeera, BBC',
+    searchQuery: 'Operation True Promise Iran missile attack Israel April 13 2024',
+    tags: ['Iran', 'Israel', 'Operation True Promise', 'ballistic missile', 'Shahed drone', 'historic'],
+    arcAltitude: 0.55,
+    arcSpeed: 1200,
+    arcColor: ['#cc0000', '#ff4444'],
+  },
+
+  {
+    id: 5,
+    date: '2024-04-14',
+    timestamp: ts('2024-04-14T02:00:00Z'),
+    title: 'Houthi Missile Salvo (Support Attack)',
+    subtitle: 'Yemen fires ballistic missiles toward Israel during True Promise',
+    description:
+      'Coordinating with Iran\'s Operation True Promise, Houthi forces in Yemen launched a salvo of ballistic missiles toward southern Israel. All were intercepted by Arrow-3 and US Navy SM-3 interceptors before reaching Israeli territory.',
+    type: EVENT_TYPES.MISSILE,
+    importance: 'major',
+    origin: { ...LOC.SANAA },
+    targets: [LOC.NEVATIM, LOC.DIMONA],
+    country: COUNTRIES.HOUTHI,
+    casualties: 'None — all intercepted',
+    source: 'Al Jazeera, Times of Israel',
+    searchQuery: 'Houthi missiles Israel April 14 2024 coordinated attack',
+    tags: ['Houthi', 'Yemen', 'Israel', 'ballistic missile', 'Arrow-3'],
+    arcAltitude: 0.62,
+    arcSpeed: 1400,
+    arcColor: ['#cc8800', '#ffaa00'],
+  },
+
+  {
+    id: 6,
+    date: '2024-04-19',
+    timestamp: ts('2024-04-19T01:30:00Z'),
+    title: 'Israeli Strike on Isfahan',
+    subtitle: 'Israel hits air defense radar near Iranian nuclear site',
+    description:
+      'Israel carried out a limited retaliatory strike on Iran, targeting an air defense S-300 radar installation near Isfahan — close to a major nuclear facility. Three small drones were used. Iran initially denied the strike and downplayed it as a "negligible" incident. Analysts viewed it as a calculated, face-saving response that avoided full escalation.',
+    type: EVENT_TYPES.DRONE,
+    importance: 'critical',
+    origin: { ...LOC.NEVATIM },
+    targets: [LOC.ISFAHAN],
+    country: COUNTRIES.ISRAEL,
+    casualties: 'None reported',
+    source: 'Reuters, NYT, Jerusalem Post',
+    searchQuery: 'Israel drone strike Isfahan Iran April 19 2024',
+    tags: ['Israel', 'Iran', 'Isfahan', 'nuclear', 'drone', 'retaliation'],
+    arcAltitude: 0.38,
+    arcSpeed: 2500,
+    arcColor: ['#0055ff', '#44aaff'],
+  },
+
+  // ── JULY–SEPT 2024 ─────────────────────────────────────────────────────────
+  {
+    id: 7,
+    date: '2024-07-27',
+    timestamp: ts('2024-07-27T17:45:00Z'),
+    title: 'Majdal Shams Massacre',
+    subtitle: 'Hezbollah rocket kills 12 children on football pitch',
+    description:
+      'A Hezbollah Falaq-1 rocket struck a football pitch in Majdal Shams, a Druze village in the Israeli Golan Heights, killing 12 children and teenagers aged 10–20. The deadliest attack on Israeli civilians since October 7, 2023. Hezbollah denied responsibility; Israel and the US attributed it to Hezbollah. The attack dramatically escalated the northern front.',
+    type: EVENT_TYPES.MISSILE,
+    importance: 'critical',
+    origin: { ...LOC.SOUTHERN_LEB },
+    targets: [{ lat: 33.1480, lng: 35.7716, label: 'Majdal Shams, Golan Heights' }],
+    country: COUNTRIES.HEZBOLLAH,
+    casualties: '12 children killed, 44 wounded',
+    source: 'Reuters, BBC, Times of Israel',
+    searchQuery: 'Majdal Shams Hezbollah rocket attack children killed July 2024',
+    tags: ['Hezbollah', 'Lebanon', 'Israel', 'Golan Heights', 'children', 'Falaq rocket'],
+    arcAltitude: 0.08,
+    arcSpeed: 3000,
+    arcColor: ['#ff6600', '#ff2200'],
+  },
+
+  {
+    id: 8,
+    date: '2024-09-17',
+    timestamp: ts('2024-09-17T15:30:00Z'),
+    title: 'Pager Operation',
+    subtitle: 'Israel detonates thousands of Hezbollah pagers simultaneously',
+    description:
+      'In a stunning intelligence operation attributed to Israel\'s Mossad, thousands of Hezbollah members\' pagers exploded simultaneously across Lebanon, killing 12 and wounding ~3,000. The devices had been covertly tampered with, with explosive material embedded during the supply chain. The operation decapitated Hezbollah\'s communications network.',
+    type: EVENT_TYPES.GROUND,
+    importance: 'critical',
+    origin: { lat: 32.0, lng: 34.8, label: 'Israel (Mossad)' },
+    targets: [LOC.BEIRUT, LOC.SOUTHERN_LEB],
+    country: COUNTRIES.ISRAEL,
+    casualties: '12 killed, ~3,000 injured',
+    source: 'Reuters, NYT, BBC',
+    searchQuery: 'Lebanon pager explosion Hezbollah September 17 2024',
+    tags: ['Israel', 'Mossad', 'Hezbollah', 'Lebanon', 'pager', 'supply chain', 'intelligence'],
+    arcAltitude: 0.18,
+    arcSpeed: 2000,
+    arcColor: ['#0066ff', '#00ccff'],
+  },
+
+  {
+    id: 9,
+    date: '2024-09-27',
+    timestamp: ts('2024-09-27T18:00:00Z'),
+    title: 'Nasrallah Eliminated',
+    subtitle: 'Israel kills Hezbollah chief Hassan Nasrallah in Beirut',
+    description:
+      'Israeli Air Force F-35I jets struck Hezbollah\'s underground headquarters in the Dahieh suburb of Beirut, killing Hezbollah Secretary-General Hassan Nasrallah — who had led the organization for 32 years. The strike used multiple bunker-buster bombs. Several other senior commanders were also killed. Iran declared three days of mourning.',
+    type: EVENT_TYPES.AIRSTRIKE,
+    importance: 'critical',
+    origin: { ...LOC.RAMAT_DAVID },
+    targets: [{ lat: 33.8490, lng: 35.4900, label: 'Dahieh, Beirut' }],
+    country: COUNTRIES.ISRAEL,
+    casualties: 'Hassan Nasrallah + senior HQ staff',
+    source: 'IDF, Reuters, Al Jazeera, BBC',
+    searchQuery: 'Israel kills Hassan Nasrallah Hezbollah Beirut September 2024',
+    tags: ['Israel', 'Hezbollah', 'Nasrallah', 'Beirut', 'F-35', 'targeted killing', 'historic'],
+    arcAltitude: 0.22,
+    arcSpeed: 1600,
+    arcColor: ['#0055ff', '#44aaff'],
+  },
+
+  // ── OCT 2024 ──────────────────────────────────────────────────────────────
+  {
+    id: 10,
+    date: '2024-10-01',
+    timestamp: ts('2024-10-01T19:00:00Z'),
+    title: '⚡ OPERATION TRUE PROMISE II',
+    subtitle: 'Iran fires 180 ballistic missiles — largest single salvo at Israel',
+    description:
+      'Iran launched approximately 180 Fattah-1 hypersonic and Emad ballistic missiles at Israel, targeting military and intelligence headquarters around Tel Aviv and the Mossad HQ. It was the largest single ballistic missile salvo in history against one country. Arrow-3 and THAAD (US-operated) intercepted most; a small number hit the Nevatim Air Base runway and open areas near Tel Aviv.',
+    type: EVENT_TYPES.MISSILE,
+    importance: 'critical',
+    origin: { ...LOC.TEHRAN },
+    targets: [LOC.TEL_AVIV, LOC.NEVATIM, { lat: 32.0670, lng: 34.8370, label: 'Mossad HQ, Glilot' }],
+    country: COUNTRIES.IRAN,
+    casualties: 'Minor — craters at Nevatim, no mass casualties',
+    source: 'IRNA, IDF, Reuters, AP',
+    searchQuery: 'Operation True Promise 2 Iran missile attack Israel October 2024',
+    tags: ['Iran', 'Israel', 'Operation True Promise II', 'Fattah hypersonic', 'ballistic missile', 'THAAD'],
+    arcAltitude: 0.58,
+    arcSpeed: 1000,
+    arcColor: ['#cc0000', '#ff6666'],
+  },
+
+  {
+    id: 11,
+    date: '2024-10-26',
+    timestamp: ts('2024-10-26T02:00:00Z'),
+    title: '⚡ OPERATION DAYS OF REPENTANCE',
+    subtitle: 'Israel strikes missile production & air defenses deep inside Iran',
+    description:
+      'Israel launched its largest-ever strike on Iranian soil: F-35I jets, refueled by KC-46 tankers, struck S-300 air defense batteries in Tehran province, ballistic missile production facilities in Parchin, and military bases near Isfahan. At least 4 waves of strikes over 4 hours. Iran\'s southern air defenses were rendered inoperable. The operation demonstrated Israel\'s ability to reach any target in Iran.',
+    type: EVENT_TYPES.AIRSTRIKE,
+    importance: 'critical',
+    origin: { ...LOC.NEVATIM },
+    targets: [
+      LOC.TEHRAN,
+      LOC.ISFAHAN,
+      { lat: 35.5491, lng: 51.7222, label: 'Parchin Military Complex' },
+    ],
+    country: COUNTRIES.ISRAEL,
+    casualties: '4 Iranian soldiers KIA; major facility damage',
+    source: 'Reuters, NYT, Jerusalem Post, IRNA',
+    searchQuery: 'Israel strikes Iran October 26 2024 missile production air defense',
+    tags: ['Israel', 'Iran', 'F-35', 'Parchin', 'airstrike', 'air defense', 'historic'],
+    arcAltitude: 0.52,
+    arcSpeed: 1600,
+    arcColor: ['#0044ff', '#0099ff'],
+  },
+
+  // ── RED SEA / HOUTHI CAMPAIGN ──────────────────────────────────────────────
+  {
+    id: 12,
+    date: '2024-01-12',
+    timestamp: ts('2024-01-12T02:00:00Z'),
+    title: 'Operation Prosperity Guardian',
+    subtitle: 'US & UK launch massive strikes on Houthi targets in Yemen',
+    description:
+      'A US-led coalition (US, UK, Australia, Canada, Netherlands) launched strikes against 60+ Houthi targets across 16 sites in Yemen, including radar sites, drone storage, launch sites, and weapons depots. The operation aimed to degrade Houthi capability after months of attacks on Red Sea shipping. B-1B bombers, F/A-18s from USS Eisenhower, and Tomahawk cruise missiles were used.',
+    type: EVENT_TYPES.AIRSTRIKE,
+    importance: 'major',
+    origin: { ...LOC.USS_IKE },
+    targets: [LOC.SANAA, LOC.HODEIDAH, { lat: 15.5527, lng: 42.5873, label: 'Saada, Yemen' }],
+    country: COUNTRIES.USA,
+    casualties: 'Unknown militia casualties',
+    source: 'Pentagon, Reuters, BBC',
+    searchQuery: 'US UK strikes Yemen Houthi January 12 2024 Operation Prosperity Guardian',
+    tags: ['USA', 'Yemen', 'Houthi', 'Red Sea', 'coalition', 'airstrike'],
+    arcAltitude: 0.32,
+    arcSpeed: 1800,
+    arcColor: ['#ffffff', '#aaccff'],
+  },
+
+  {
+    id: 13,
+    date: '2024-03-04',
+    timestamp: ts('2024-03-04T10:00:00Z'),
+    title: 'Houthi Missile Hits Cargo Ship',
+    subtitle: 'Anti-ship ballistic missile strikes true vessel in Red Sea',
+    description:
+      'Houthi forces struck the cargo vessel True Confidence with an anti-ship ballistic missile in the Gulf of Aden, killing three crew members — the first seafarer deaths in the Red Sea crisis. The vessel, carrying cargo to Bangladesh, was set ablaze and later sank. The attack sent global shipping insurance rates to record highs.',
+    type: EVENT_TYPES.MISSILE,
+    importance: 'major',
+    origin: { ...LOC.HODEIDAH },
+    targets: [{ ...LOC.GULF_ADEN, label: 'MV True Confidence (Gulf of Aden)' }],
+    country: COUNTRIES.HOUTHI,
+    casualties: '3 crew killed, 4 missing',
+    source: 'Reuters, AP, Lloyd\'s List',
+    searchQuery: 'Houthi missile True Confidence cargo ship Red Sea killed March 2024',
+    tags: ['Houthi', 'Yemen', 'Red Sea', 'cargo ship', 'anti-ship missile', 'casualties'],
+    arcAltitude: 0.18,
+    arcSpeed: 2200,
+    arcColor: ['#cc8800', '#ffcc00'],
+  },
+
+  // ── US CARRIER DEPLOYMENTS ──────────────────────────────────────────────────
+  {
+    id: 14,
+    date: '2024-10-15',
+    timestamp: ts('2024-10-15T00:00:00Z'),
+    title: 'USS Abraham Lincoln Enters Gulf',
+    subtitle: 'Third US carrier strike group deploys to Persian Gulf',
+    description:
+      'The USS Abraham Lincoln Carrier Strike Group (CSG-3) entered the Persian Gulf, joining USS Eisenhower in the Red Sea and USS Gerald R. Ford in the Eastern Mediterranean. The three-carrier deployment was the largest US naval presence in the Middle East since the 2003 Iraq War, a direct signal to Iran during the October escalation.',
+    type: EVENT_TYPES.NAVAL,
+    importance: 'major',
+    origin: { lat: -7.3, lng: 72.4, label: 'Indian Ocean Transit' },
+    targets: [LOC.USS_LINCOLN],
+    country: COUNTRIES.USA,
+    casualties: 'N/A',
+    source: 'US Navy, Reuters, USNI News',
+    searchQuery: 'USS Abraham Lincoln Persian Gulf three carrier deployment Middle East 2024',
+    tags: ['USA', 'Navy', 'carrier', 'Persian Gulf', 'deterrence'],
+    arcAltitude: 0.08,
+    arcSpeed: 6000,
+    arcColor: ['#4488ff', '#aaddff'],
+  },
+
+  // ── LEBANON WAR 2024 ───────────────────────────────────────────────────────
+  {
+    id: 15,
+    date: '2024-10-01',
+    timestamp: ts('2024-10-01T00:01:00Z'),
+    title: 'IDF Ground Invasion — Lebanon',
+    subtitle: 'Israeli forces cross border for "limited" ground operation',
+    description:
+      'The IDF launched a ground incursion into southern Lebanon targeting Hezbollah tunnel networks and cross-border launch sites, hours before Iran\'s ballistic missile attack (True Promise II). Armored columns crossed at multiple points. Israeli air and naval assets struck Beirut suburbs simultaneously. The operation marked the first Israeli ground operation in Lebanon since 2006.',
+    type: EVENT_TYPES.GROUND,
+    importance: 'critical',
+    origin: { lat: 33.0500, lng: 35.1500, label: 'Northern Israel Border' },
+    targets: [LOC.SOUTHERN_LEB],
+    country: COUNTRIES.ISRAEL,
+    casualties: 'Dozens IDF, thousands Hezbollah/civilian',
+    source: 'IDF, Reuters, Al Jazeera',
+    searchQuery: 'IDF ground invasion Lebanon October 2024 Hezbollah',
+    tags: ['Israel', 'Lebanon', 'ground invasion', 'Hezbollah', '2024 war'],
+    arcAltitude: 0.04,
+    arcSpeed: 8000,
+    arcColor: ['#2266ff', '#4488ff'],
+  },
+
+  {
+    id: 16,
+    date: '2024-11-26',
+    timestamp: ts('2024-11-26T00:00:00Z'),
+    title: 'Lebanon Ceasefire',
+    subtitle: 'US-brokered 60-day ceasefire halts Lebanon war',
+    description:
+      'A US and France-brokered ceasefire agreement came into effect between Israel and Hezbollah, halting 60+ days of intensive combat. Israel retained forces in southern Lebanon buffer zones; Hezbollah agreed to pull north of the Litani River. The deal mirrored UN Resolution 1701 from 2006 but with stronger monitoring provisions.',
+    type: EVENT_TYPES.DEFENSE,
+    importance: 'major',
+    origin: { lat: 38.9072, lng: -77.0369, label: 'Washington D.C. (Brokered)' },
+    targets: [LOC.BEIRUT, LOC.JERUSALEM],
+    country: COUNTRIES.USA,
+    casualties: 'N/A (ceasefire)',
+    source: 'State Dept, Reuters, BBC',
+    searchQuery: 'Lebanon ceasefire November 2024 Israel Hezbollah US brokered',
+    tags: ['Lebanon', 'Israel', 'Hezbollah', 'ceasefire', 'USA', 'diplomacy'],
+    arcAltitude: 0.25,
+    arcSpeed: 4000,
+    arcColor: ['#00ff88', '#00ffcc'],
+  },
+
+  // ── 2025 EVENTS ────────────────────────────────────────────────────────────
+  {
+    id: 17,
+    date: '2025-01-19',
+    timestamp: ts('2025-01-19T00:00:00Z'),
+    title: 'Gaza Ceasefire — Phase 1',
+    subtitle: 'Israel–Hamas ceasefire takes effect; hostage releases begin',
+    description:
+      'A phased ceasefire agreement between Israel and Hamas came into effect, mediated by Qatar, Egypt, and the US. Phase 1 included a 42-day pause in fighting, withdrawal of Israeli forces from populated areas, and release of 33 Israeli hostages in exchange for ~900 Palestinian prisoners. The deal was preceded by final IDF operations and a surge in humanitarian aid.',
+    type: EVENT_TYPES.DEFENSE,
+    importance: 'critical',
+    origin: { lat: 25.2854, lng: 51.5310, label: 'Doha, Qatar (Mediation)' },
+    targets: [{ lat: 31.5017, lng: 34.4674, label: 'Gaza Strip' }, LOC.JERUSALEM],
+    country: COUNTRIES.USA,
+    casualties: 'N/A (ceasefire)',
+    source: 'Reuters, AP, Al Jazeera',
+    searchQuery: 'Gaza ceasefire January 2025 hostages Hamas Israel Qatar',
+    tags: ['Gaza', 'Israel', 'Hamas', 'ceasefire', 'hostages', 'Qatar', 'USA'],
+    arcAltitude: 0.2,
+    arcSpeed: 4000,
+    arcColor: ['#00ff88', '#88ffcc'],
+  },
+
+  {
+    id: 18,
+    date: '2025-03-18',
+    timestamp: ts('2025-03-18T06:00:00Z'),
+    title: 'Gaza Ceasefire Collapses',
+    subtitle: 'IDF resumes operations in Gaza after deal breakdown',
+    description:
+      'After Hamas refused bridging proposals for Phase 2 negotiations, Israel relaunched military operations across Gaza. Airstrikes killed over 400 people in the first 24 hours. The US said it had been informed in advance. Widespread international condemnation followed. Mediator Qatar suspended its role in talks.',
+    type: EVENT_TYPES.AIRSTRIKE,
+    importance: 'critical',
+    origin: { ...LOC.NEVATIM },
+    targets: [
+      { lat: 31.5017, lng: 34.4674, label: 'Gaza City' },
+      { lat: 31.3469, lng: 34.3069, label: 'Khan Younis, Gaza' },
+      { lat: 31.2452, lng: 34.2058, label: 'Rafah, Gaza' },
+    ],
+    country: COUNTRIES.ISRAEL,
+    casualties: '400+ killed in first 24h (Gazan MoH)',
+    source: 'Reuters, Al Jazeera, Times of Israel',
+    searchQuery: 'Israel resumes Gaza operation March 2025 ceasefire collapse',
+    tags: ['Gaza', 'Israel', 'Hamas', 'airstrike', 'ceasefire collapse', '2025'],
+    arcAltitude: 0.08,
+    arcSpeed: 1800,
+    arcColor: ['#0044ff', '#3399ff'],
+  },
+
+  {
+    id: 19,
+    date: '2025-04-12',
+    timestamp: ts('2025-04-12T03:00:00Z'),
+    title: 'US–Iran Nuclear Talks Begin (Oman)',
+    subtitle: 'First direct US–Iran talks in years under Trump administration',
+    description:
+      'US special envoy Steve Witkoff and Iranian FM Abbas Araghchi held the first direct talks between the US and Iran since 2022, mediated in Muscat, Oman. The talks focused on Iran\'s nuclear enrichment levels (currently at 60% purity) and potential sanctions relief. Israel expressed concern the talks could legitimize Iran\'s nuclear program.',
+    type: EVENT_TYPES.DEFENSE,
+    importance: 'major',
+    origin: { lat: 23.5880, lng: 58.3829, label: 'Muscat, Oman' },
+    targets: [{ lat: 38.9072, lng: -77.0369, label: 'Washington D.C.' }, LOC.TEHRAN],
+    country: COUNTRIES.USA,
+    casualties: 'N/A (diplomacy)',
+    source: 'Reuters, WSJ, IRNA',
+    searchQuery: 'US Iran nuclear talks Oman 2025 Witkoff Araghchi',
+    tags: ['USA', 'Iran', 'nuclear', 'diplomacy', 'Oman', '2025'],
+    arcAltitude: 0.3,
+    arcSpeed: 5000,
+    arcColor: ['#00ff88', '#00ccff'],
+  },
+
+  {
+    id: 20,
+    date: '2025-05-05',
+    timestamp: ts('2025-05-05T14:00:00Z'),
+    title: 'US Strikes Houthi Capital',
+    subtitle: 'B-2 bombers hit underground bunkers in Sana\'a',
+    description:
+      'After months of continued Houthi attacks on Red Sea shipping and a drone attack on Israel, US B-2 Spirit bombers flying from Diego Garcia conducted a precision strike campaign against hardened underground Houthi command bunkers in Sana\'a. The operation used GBU-57 Massive Ordnance Penetrators (MOPs). Houthi leadership survived but the strikes destroyed key C2 infrastructure.',
+    type: EVENT_TYPES.AIRSTRIKE,
+    importance: 'critical',
+    origin: { ...LOC.DIEGO_GARCIA },
+    targets: [LOC.SANAA, { lat: 14.5426, lng: 43.7198, label: 'Dhamar, Yemen' }],
+    country: COUNTRIES.USA,
+    casualties: 'Unknown militia; civilian casualties disputed',
+    source: 'Pentagon, Reuters, Al Jazeera',
+    searchQuery: 'US B-2 bomber Houthi Sanaa strike 2025 bunker buster',
+    tags: ['USA', 'Yemen', 'Houthi', 'B-2', 'bunker buster', 'Diego Garcia'],
+    arcAltitude: 0.65,
+    arcSpeed: 2000,
+    arcColor: ['#ffffff', '#ccddff'],
+  },
+
+  {
+    id: 21,
+    date: '2025-08-20',
+    timestamp: ts('2025-08-20T02:00:00Z'),
+    title: 'Israeli Strike — Natanz Enrichment Facility',
+    subtitle: 'Israel targets Iran\'s primary nuclear enrichment site',
+    description:
+      'In the most significant escalation of the conflict, Israel launched a multi-wave strike against the Natanz uranium enrichment facility using F-35Is, armed drones, and cyber-coordinated precision munitions. Advanced centrifuges were reported destroyed. Iran immediately suspended IAEA inspections and announced it would enrich to 90% purity. The US publicly distanced itself but privately had given Israel a green light window.',
+    type: EVENT_TYPES.AIRSTRIKE,
+    importance: 'critical',
+    origin: { ...LOC.NEVATIM },
+    targets: [{ lat: 33.7225, lng: 51.7269, label: 'Natanz Nuclear Facility' }],
+    country: COUNTRIES.ISRAEL,
+    casualties: 'Unknown; IAEA access denied',
+    source: 'NYT, Reuters (partially confirmed)',
+    searchQuery: 'Israel strikes Natanz nuclear facility Iran 2025',
+    tags: ['Israel', 'Iran', 'Natanz', 'nuclear', 'F-35', 'IAEA', 'escalation', '2025'],
+    arcAltitude: 0.48,
+    arcSpeed: 1600,
+    arcColor: ['#0033ff', '#0088ff'],
+  },
+
+  {
+    id: 22,
+    date: '2026-01-15',
+    timestamp: ts('2026-01-15T20:00:00Z'),
+    title: '⚡ OPERATION TRUE PROMISE III',
+    subtitle: 'Iran launches 250 missiles — first with nuclear-capable Khorramshahr-4',
+    description:
+      'Iran launched its third major direct attack on Israel, comprising 250 projectiles including for the first time the Khorramshahr-4 (Kheibar) medium-range ballistic missile. Combined US-Israel-allied defenses intercepted ~92%. 8 missiles struck areas near Dimona, Tel Aviv and Haifa. The US declared it a "red line" moment and repositioned additional THAAD batteries to Israel.',
+    type: EVENT_TYPES.MISSILE,
+    importance: 'critical',
+    origin: { ...LOC.TEHRAN },
+    targets: [LOC.DIMONA, LOC.TEL_AVIV, LOC.HAIFA],
+    country: COUNTRIES.IRAN,
+    casualties: '23 killed, 180 injured',
+    source: 'SIMULATED — based on escalation trajectory',
+    searchQuery: 'Iran missile attack Israel 2026 Khorramshahr Kheibar',
+    tags: ['Iran', 'Israel', 'Operation True Promise III', 'Kheibar', 'Dimona', 'SIMULATED'],
+    arcAltitude: 0.6,
+    arcSpeed: 900,
+    arcColor: ['#aa0000', '#ff0000'],
+    simulated: true,
+  },
+
+  {
+    id: 23,
+    date: '2026-03-08',
+    timestamp: ts('2026-03-08T04:00:00Z'),
+    title: 'US Joins Israeli Strike — IRGC HQ',
+    subtitle: 'US & Israel conduct joint strike on IRGC headquarters, Tehran',
+    description:
+      'Following the January attack on Dimona, the US and Israel conducted a joint airstrike on the IRGC General Staff headquarters in Tehran\'s Lavizan district, using B-2 bombers from Diego Garcia and Israeli F-35Is. The IRGC commander was reportedly killed. The strikes were accompanied by US cyber operations disabling Iranian air defense networks.',
+    type: EVENT_TYPES.AIRSTRIKE,
+    importance: 'critical',
+    origin: { ...LOC.DIEGO_GARCIA },
+    targets: [{ lat: 35.7597, lng: 51.5000, label: 'IRGC HQ, Lavizan, Tehran' }],
+    country: COUNTRIES.USA,
+    casualties: 'IRGC commander KIA (unconfirmed)',
+    source: 'SIMULATED — based on escalation trajectory',
+    searchQuery: 'US Israel joint strike IRGC Tehran 2026',
+    tags: ['USA', 'Israel', 'Iran', 'IRGC', 'Tehran', 'B-2', 'joint operation', 'SIMULATED'],
+    arcAltitude: 0.7,
+    arcSpeed: 1800,
+    arcColor: ['#8888ff', '#ffffff'],
+    simulated: true,
+  },
+
+  {
+    id: 24,
+    date: '2026-04-10',
+    timestamp: ts('2026-04-10T00:00:00Z'),
+    title: 'USS Carl Vinson Enters Strait of Hormuz',
+    subtitle: 'Fourth US carrier strike group deploys to Persian Gulf',
+    description:
+      'The USS Carl Vinson Carrier Strike Group (CSG-1) transited the Strait of Hormuz into the Persian Gulf, joining USS Abraham Lincoln. Iran scrambled F-14s and deployed IRGCN fast boats to shadow the carrier. The unprecedented two-carrier Persian Gulf presence signals imminent US intention to enforce a naval blockade or conduct sustained strikes.',
+    type: EVENT_TYPES.NAVAL,
+    importance: 'critical',
+    origin: { lat: 5.0, lng: 68.0, label: 'Indian Ocean (Transit)' },
+    targets: [{ lat: 26.0, lng: 54.0, label: 'USS Carl Vinson (Persian Gulf)' }],
+    country: COUNTRIES.USA,
+    casualties: 'N/A',
+    source: 'SIMULATED — based on US naval deployments',
+    searchQuery: 'USS Carl Vinson Persian Gulf 2026 Iran',
+    tags: ['USA', 'Navy', 'carrier', 'Strait of Hormuz', 'Iran', 'deterrence', 'SIMULATED'],
+    arcAltitude: 0.06,
+    arcSpeed: 7000,
+    arcColor: ['#4499ff', '#aaccff'],
+    simulated: true,
+  },
+]
+
+export default events
+</file>
+
+<file path="src/hooks/useSimulation.js">
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { TIMELINE_START, TIMELINE_END } from '../data/events'
+
+const MS_PER_REAL_MS_AT_1X = 86400           // 1 real second = 1 game day at 1×
+const ARC_VISIBLE_WINDOW   = 12 * 60 * 60 * 1000  // 12 game-hours
+const LIVE_CYCLE_INTERVAL  = 3500
+
+export function useSimulation({
+  mode,
+  currentTime,
+  isPlaying,
+  speed,
+  events,
+  setCurrentTime,
+  startTime = TIMELINE_START,
+  endTime   = TIMELINE_END,
+}) {
+  const rafRef         = useRef(null)
+  const lastRealTsRef  = useRef(null)
+
+  // ── TIMELINE PLAYBACK ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (mode !== 'timeline' || !isPlaying) {
+      lastRealTsRef.current = null
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      return
+    }
+
+    const tick = (realTs) => {
+      if (lastRealTsRef.current !== null) {
+        const realDelta = realTs - lastRealTsRef.current
+        const gameDelta = realDelta * MS_PER_REAL_MS_AT_1X * speed
+        setCurrentTime((prev) => {
+          const next = prev + gameDelta
+          // Loop back to campaign start (not global start) when reaching campaign end
+          return next >= endTime ? startTime : next
+        })
+      }
+      lastRealTsRef.current = realTs
+      rafRef.current = requestAnimationFrame(tick)
+    }
+
+    rafRef.current = requestAnimationFrame(tick)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      lastRealTsRef.current = null
+    }
+  }, [mode, isPlaying, speed, startTime, endTime, setCurrentTime])
+
+  // ── TIMELINE ACTIVE EVENTS — stable reference ──────────────────────────────
+  // Filter every frame but only return a new array reference when the set of
+  // visible event IDs actually changes, so Globe3D's useMemo doesn't re-fire
+  // on every single RAF tick.
+  const stableActiveRef = useRef([])
+  const stableKeyRef    = useRef('')
+
+  const timelineActive = useMemo(() => {
+    const filtered = events.filter(
+      (ev) => ev.timestamp <= currentTime && ev.timestamp >= currentTime - ARC_VISIBLE_WINDOW
+    )
+    const key = filtered.map((e) => e.id).sort().join(',')
+    if (key !== stableKeyRef.current) {
+      stableKeyRef.current  = key
+      stableActiveRef.current = filtered
+    }
+    return stableActiveRef.current
+  }, [events, currentTime])
+
+  // ── LIVE MODE ─────────────────────────────────────────────────────────────
+  const [liveActive, setLiveActive] = useState(() => pickRandom(events, 3))
+
+  useEffect(() => {
+    if (mode !== 'live') return
+    setLiveActive(pickRandom(events, 3))
+
+    const interval = setInterval(() => {
+      setLiveActive((prev) => {
+        const prevIds = new Set(prev.map((e) => e.id))
+        const pool    = events.filter((e) => !prevIds.has(e.id))
+        const next    = pool.length
+          ? pool[Math.floor(Math.random() * pool.length)]
+          : events[Math.floor(Math.random() * events.length)]
+        return [...prev.slice(-2), next]
+      })
+    }, LIVE_CYCLE_INTERVAL)
+
+    return () => clearInterval(interval)
+  }, [mode, events])
+
+  return {
+    activeEvents: mode === 'timeline' ? timelineActive : liveActive,
+    liveActive,
+  }
+}
+
+function pickRandom(arr, n) {
+  return [...arr].sort(() => Math.random() - 0.5).slice(0, n)
+}
+</file>
+
+<file path="war_map.html">
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box }
+body { background:#000; color:#00ff41; font-family:'Courier New',monospace }
+#wm { position:relative; width:100%; height:840px; background:#000; overflow:hidden }
+#wm::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.1) 2px,rgba(0,0,0,0.1) 4px); pointer-events:none; z-index:9999 }
+.mp { background:rgba(0,8,0,0.9); border:1px solid rgba(0,255,65,0.35); box-shadow:0 0 10px rgba(0,255,65,0.12),inset 0 0 10px rgba(0,255,65,0.04) }
+.glow { text-shadow:0 0 8px #00ff41,0 0 16px #00ff41 }
+.glow-r { text-shadow:0 0 8px #ff2222 }
+.glow-a { text-shadow:0 0 8px #ffb000 }
+.glow-b { text-shadow:0 0 8px #0088ff }
+.btn { cursor:pointer; background:none; border:none; font-family:inherit; color:inherit }
+#wm-hdr { position:absolute; top:0; left:0; right:0; z-index:30; display:flex; align-items:stretch }
+#wm-hdr-l { display:flex; align-items:center; gap:12px; padding:8px 16px; border-right:1px solid rgba(0,255,65,0.2) }
+#wm-hdr-c { flex:1; display:flex; align-items:center; justify-content:center }
+#wm-hdr-r { display:flex; align-items:center; gap:16px; padding:8px 16px; border-left:1px solid rgba(0,255,65,0.2) }
+.mbtn { padding:8px 18px; font-size:11px; font-weight:bold; letter-spacing:3px; transition:all 0.2s; cursor:pointer; background:none; border:none; font-family:inherit }
+.mbtn.al { background:rgba(80,0,0,0.8); color:#ff4444; border-bottom:2px solid #ff4444 }
+.mbtn.at { background:rgba(0,40,0,0.8); color:#00ff41; border-bottom:2px solid #00ff41 }
+.mbtn:not(.al):not(.at) { color:#336633 }
+#wm-ticker { position:absolute; top:52px; left:0; right:0; z-index:20; display:flex; align-items:center; overflow:hidden; height:26px; background:rgba(0,8,0,0.9); border-bottom:1px solid rgba(0,255,65,0.15) }
+#wm-tlabel { flex-shrink:0; background:#4d0000; border-right:1px solid #660000; padding:0 10px; height:100%; display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; letter-spacing:2px; color:#ff9999 }
+#wm-ttrack { white-space:nowrap; display:inline-block; font-size:11px; color:#99ffbb; animation:tick 100s linear infinite; padding-left:100% }
+#wm-ttrack:hover { animation-play-state:paused }
+@keyframes tick { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+#wm-card { position:absolute; right:16px; top:110px; width:300px; z-index:30; display:none; border-radius:6px; overflow:hidden; max-height:calc(100% - 210px); display:none; flex-direction:column; background:rgba(0,8,0,0.95) }
+#wm-modal { position:absolute; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px) }
+#wm-modal-inner { border-radius:8px; overflow:hidden; display:flex; flex-direction:column; width:min(860px,96%); max-height:90%; background:rgba(0,8,0,0.97) }
+#wm-legend { position:absolute; bottom:84px; right:16px; z-index:30; border-radius:6px; padding:12px; min-width:170px }
+#wm-tl { position:absolute; bottom:0; left:0; right:0; z-index:30; display:none; border-top:1px solid rgba(0,255,65,0.2) }
+#wm-tl-dots { position:relative; height:22px; margin:8px 16px 2px }
+#tl-range { width:100%; -webkit-appearance:none; appearance:none; height:4px; background:rgba(0,255,65,0.2); border-radius:2px; outline:none }
+#tl-range::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:#00ff41; cursor:pointer; box-shadow:0 0 6px #00ff41 }
+#wm-live-info { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:30; padding:8px 24px; text-align:center; border-radius:6px }
+#wm-globe { position:absolute; inset:0 }
+.ev-label { padding:2px 6px; background:rgba(0,0,0,0.85); font-size:10px; font-family:'Courier New',monospace; pointer-events:none; white-space:nowrap; border:1px solid rgba(0,255,65,0.4) }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.ldot { animation:blink 1s infinite }
+.speed-btn { padding:2px 8px; font-size:10px; border-radius:3px; border:1px solid #1a3d1a; color:#336633; cursor:pointer; background:none; font-family:inherit; transition:all 0.2s }
+.speed-btn.act { border-color:#00ff41; color:#00ff41; background:rgba(0,255,65,0.1) }
+::-webkit-scrollbar { width:4px }
+::-webkit-scrollbar-track { background:#000 }
+::-webkit-scrollbar-thumb { background:rgba(0,255,65,0.4) }
+#fs-btn { padding:5px 10px; font-size:10px; font-weight:bold; letter-spacing:2px; border-radius:3px; cursor:pointer; font-family:'Courier New',monospace; background:rgba(0,20,0,0.8); border:1px solid rgba(0,255,65,0.3); color:#336633; transition:all 0.2s }
+#fs-btn:hover { color:#00ff41; border-color:rgba(0,255,65,0.6) }
+#wm-views { position:absolute; left:12px; top:50%; transform:translateY(-50%); z-index:30; display:flex; flex-direction:column; gap:3px }
+.vbtn-label { font-size:8px; color:#1a3d1a; letter-spacing:3px; text-align:center; padding:4px 0 2px; pointer-events:none }
+.vbtn { padding:5px 10px; font-size:9px; font-weight:bold; letter-spacing:2px; border-radius:3px; cursor:pointer; font-family:'Courier New',monospace; background:rgba(0,12,0,0.85); border:1px solid rgba(0,255,65,0.2); color:#336633; transition:all 0.2s; white-space:nowrap; text-align:center; display:block; width:100% }
+.vbtn:hover { color:#00ff41; border-color:rgba(0,255,65,0.5); background:rgba(0,30,0,0.9) }
+</style>
+</head>
+<body>
+<div id="wm">
+  <div id="wm-globe"></div>
+
+  <!-- HEADER -->
+  <div id="wm-hdr" class="mp">
+    <div id="wm-hdr-l" class="mp">
+      <div>
+        <div style="font-size:9px;color:#336633;letter-spacing:3px">OSINT THEATER MAP</div>
+        <div style="font-size:13px;font-weight:bold;letter-spacing:2px" class="glow">IL / IR / US CONFLICT</div>
+      </div>
+      <div style="border-left:1px solid #1a3d1a;padding-left:12px;font-size:11px">
+        <div style="color:#336633" id="wm-date">-- --- ----</div>
+        <div style="font-weight:bold" class="glow" id="wm-clock">--:--:-- UTC</div>
+      </div>
+    </div>
+    <div id="wm-hdr-c">
+      <div class="mp" style="display:flex;border-radius:4px;overflow:hidden">
+        <button id="btn-live" class="mbtn al" onclick="setMode('live')">
+          <span class="ldot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff4444;margin-right:6px;vertical-align:middle"></span>LIVE
+        </button>
+        <button id="btn-tl" class="mbtn" onclick="setMode('timeline')">&#9201; TIMELINE</button>
+      </div>
+    </div>
+    <div id="wm-hdr-r" class="mp">
+      <div style="text-align:center">
+        <div style="font-size:9px;color:#336633;letter-spacing:2px">IRAN THREAT</div>
+        <div style="font-size:12px;font-weight:bold" class="glow-r">CRITICAL</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;color:#336633;letter-spacing:2px">ACTIVE OPS</div>
+        <div style="font-size:12px;font-weight:bold" class="glow-a" id="ops-count">3</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;color:#336633;letter-spacing:2px">US CARRIERS</div>
+        <div style="font-size:12px;font-weight:bold" class="glow-b">2</div>
+      </div>
+      <div style="border-left:1px solid #1a3d1a;padding-left:12px">
+        <button id="fs-btn" onclick="toggleFullscreen()" title="Fullscreen (F)">&#9974; FULL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEWS TICKER -->
+  <div id="wm-ticker">
+    <div id="wm-tlabel">
+      <span class="ldot" style="width:8px;height:8px;border-radius:50%;background:#ff4444;display:inline-block"></span>
+      LIVE NEWS
+    </div>
+    <div style="flex:1;overflow:hidden;padding-left:12px">
+      <span id="wm-ttrack"></span>
+    </div>
+  </div>
+
+  <!-- EVENT CARD (populated by JS) -->
+  <div id="wm-card"></div>
+
+  <!-- VIDEO MODAL -->
+  <div id="wm-modal" onclick="if(event.target===this)closeVideo()">
+    <div id="wm-modal-inner"></div>
+  </div>
+
+  <!-- LEGEND -->
+  <div id="wm-legend" class="mp">
+    <div style="font-size:10px;letter-spacing:3px;font-weight:bold;margin-bottom:8px" class="glow">LEGEND</div>
+    <div style="font-size:9px;color:#336633;letter-spacing:2px;margin-bottom:4px">STRIKE TYPE</div>
+    <div id="wm-ltypes"></div>
+    <div style="border-top:1px solid #1a3d1a;margin:8px 0"></div>
+    <div style="font-size:10px;color:#cc9900">&#128374; Projected scenarios marked</div>
+  </div>
+
+  <!-- TIMELINE PANEL -->
+  <div id="wm-tl" class="mp">
+    <div id="wm-tl-dots"></div>
+    <div style="padding:0 16px"><input type="range" id="tl-range" min="0" max="1000" value="0" oninput="onScrub(this.value)"></div>
+    <div style="padding:6px 16px 12px;display:flex;align-items:center;gap:12px">
+      <button class="btn" id="tl-playbtn" onclick="togglePlay()" style="color:#00ff41;font-size:16px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid #1a3d1a;border-radius:4px">&#9654;</button>
+      <div style="display:flex;gap:4px">
+        <button class="speed-btn" onclick="setSpeed(1)">1x</button>
+        <button class="speed-btn act" onclick="setSpeed(5)">5x</button>
+        <button class="speed-btn" onclick="setSpeed(20)">20x</button>
+        <button class="speed-btn" onclick="setSpeed(100)">100x</button>
+      </div>
+      <div style="flex:1;text-align:center">
+        <span style="font-size:13px;font-weight:bold" class="glow" id="tl-date">01 Jan 2024</span>
+      </div>
+      <div style="font-size:10px;color:#336633">Jan 2024 &#8212; Apr 2026</div>
+    </div>
+  </div>
+
+  <!-- LIVE INFO -->
+  <div id="wm-live-info" class="mp">
+    <div style="font-size:9px;color:#336633;letter-spacing:2px">ACTIVE OPERATIONS</div>
+    <div style="font-size:12px;font-weight:bold" class="glow" id="arc-count">3 arcs tracked</div>
+    <div style="font-size:10px;color:#336633;margin-top:2px">Click any arc or marker for details</div>
+  </div>
+
+  <!-- CORNER NOTE -->
+  <div style="position:absolute;bottom:88px;left:16px;z-index:20;color:#1a3d1a;font-size:10px;pointer-events:none;line-height:1.6">
+    <div>&#9672; DATA: OSINT / PUBLIC REPORTING</div>
+    <div>&#9672; SIMULATED EVENTS MARKED &#9672;</div>
+  </div>
+
+  <!-- VIEW PRESET CONTROLS -->
+  <div id="wm-views" class="mp" style="padding:8px 6px">
+    <div class="vbtn-label">VIEW</div>
+    <button class="vbtn" onclick="flyTo(31,44,1.3)">&#127760; THEATER</button>
+    <button class="vbtn" onclick="flyTo(31.5,35.0,0.55)">&#127988; ISRAEL</button>
+    <button class="vbtn" onclick="flyTo(33.0,51.5,0.7)">&#128308; IRAN</button>
+    <button class="vbtn" onclick="flyTo(20,42,0.9)">&#9875; RED SEA</button>
+    <button class="vbtn" onclick="flyTo(26,54,0.7)">&#128674; GULF</button>
+    <button class="vbtn" onclick="flyTo(30,40,2.5)">&#128065; WIDE</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/globe.gl"></script>
+<script>
+'use strict';
+
+/* ─── TYPE / COLOR MAPS ─────────────────────────────────── */
+var TYPE_META = {
+  missile:   {color:'#ff2222', icon:'&#128640;', label:'Missile / Rocket'},
+  airstrike: {color:'#0088ff', icon:'&#9992;&#65039;', label:'Airstrike'},
+  drone:     {color:'#ff8800', icon:'&#128760;', label:'Drone Attack'},
+  naval:     {color:'#00ccff', icon:'&#9875;', label:'Naval Operation'},
+  defense:   {color:'#00ff88', icon:'&#128737;&#65039;', label:'Defense / Diplomacy'},
+  ground:    {color:'#ffdd00', icon:'&#129678;', label:'Ground Operation'}
+};
+
+var IMP = {critical:'#ff2222', major:'#ffaa00', moderate:'#00ff41', minor:'#557755'};
+var CC  = {'Iran':'#cc0000','Israel':'#0055cc','USA':'#ffffff','Hezbollah':'#cc6600','Houthi':'#cc9900','Iraq PMF':'#884400'};
+
+/* ─── EVENTS DATA ───────────────────────────────────────── */
+var EVENTS = [
+  {id:1,date:'2024-01-28',ts:+new Date('2024-01-28T04:30:00Z'),
+   title:'Tower 22 Drone Strike',sub:'Iran-backed militia kills 3 US soldiers in Jordan',
+   desc:'An Iran-backed Iraqi militia launched an attack drone that struck US base Tower 22 in Jordan. Three US Army Reserve soldiers were killed and 47 wounded — the first US combat deaths in the region since Oct 7.',
+   type:'drone',imp:'critical',country:'Iraq PMF',
+   origin:{lat:33.3152,lng:44.3661,label:'Baghdad, Iraq'},
+   targets:[{lat:32.5,lng:38.5,label:'Tower 22, Jordan'}],
+   cas:'3 US KIA, 47 WIA',src:'Reuters, AP, DoD',
+   q:'Tower 22 drone attack Jordan US soldiers killed 2024',
+   aa:0.12,as:3500,ac:['#ff6600','#ff0000'],sim:false},
+
+  {id:2,date:'2024-02-02',ts:+new Date('2024-02-02T22:00:00Z'),
+   title:'Operation Inherent Resolve Retaliation',sub:'US strikes 85 Iran-linked targets in Iraq & Syria',
+   desc:'Following Tower 22, the US launched strikes on 85 targets across Iraq and Syria linked to IRGC. B-1B bombers dropped 125 precision munitions on C2, rocket storage, and logistics facilities.',
+   type:'airstrike',imp:'critical',country:'USA',
+   origin:{lat:35.0,lng:26.0,label:'US Forces (Med + CONUS)'},
+   targets:[{lat:33.3152,lng:44.3661,label:'Baghdad'},{lat:33.5138,lng:36.2765,label:'Damascus'},{lat:33.4625,lng:38.6453,label:'Al-Tanf'}],
+   cas:'Unknown militia casualties',src:'Pentagon, Reuters, BBC',
+   q:'US airstrike Iraq Syria retaliation Tower 22 February 2024',
+   aa:0.35,as:1800,ac:['#ffffff','#aaddff'],sim:false},
+
+  {id:3,date:'2024-04-01',ts:+new Date('2024-04-01T13:00:00Z'),
+   title:'Israeli Strike — Iranian Consulate Damascus',sub:'F-35 destroys IRGC compound, kills 2 generals',
+   desc:'Israeli F-35 jets struck the Iranian consular annex in Damascus, killing 16 people including two senior IRGC generals. The strike triggered Iran\'s vow of direct retaliation on Israeli soil.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:33.5138,lng:36.2765,label:'Damascus, Syria'}],
+   cas:'16 killed (2 IRGC generals)',src:'Reuters, Times of Israel, IRNA',
+   q:'Israel strike Iranian consulate Damascus April 2024 IRGC generals',
+   aa:0.25,as:1500,ac:['#0044ff','#00aaff'],sim:false},
+
+  {id:4,date:'2024-04-13',ts:+new Date('2024-04-13T23:30:00Z'),
+   title:'OPERATION TRUE PROMISE',sub:'Iran fires 170 drones + 120 ballistic missiles at Israel',
+   desc:'Iran\'s first-ever direct attack on Israeli territory: ~170 Shahed drones, 30 cruise missiles, 120 ballistic missiles. Coordinated from Iran, Iraq, Yemen and Lebanon. Over 99% intercepted by Israel, US, UK and Jordan.',
+   type:'missile',imp:'critical',country:'Iran',
+   origin:{lat:35.6892,lng:51.389,label:'Tehran, Iran'},
+   targets:[{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},{lat:31.7683,lng:35.2137,label:'Jerusalem'},{lat:32.0853,lng:34.7818,label:'Tel Aviv'}],
+   cas:'>99% intercepted; 1 child injured',src:'IDF, Reuters, Al Jazeera, BBC',
+   q:'Operation True Promise Iran missile attack Israel April 13 2024',
+   aa:0.55,as:1200,ac:['#cc0000','#ff4444'],sim:false},
+
+  {id:5,date:'2024-04-14',ts:+new Date('2024-04-14T02:00:00Z'),
+   title:'Houthi Coordinated Salvo',sub:'Yemen fires at Israel during Operation True Promise',
+   desc:'Coordinating with True Promise, Houthi forces launched ballistic missiles toward southern Israel. All intercepted by Arrow-3 and US Navy SM-3 interceptors.',
+   type:'missile',imp:'major',country:'Houthi',
+   origin:{lat:15.3694,lng:44.191,label:"Sana'a, Yemen"},
+   targets:[{lat:31.2077,lng:35.0127,label:'Nevatim'},{lat:31.0748,lng:35.1536,label:'Dimona'}],
+   cas:'None — all intercepted',src:'Al Jazeera, Times of Israel',
+   q:'Houthi missiles Israel April 14 2024 coordinated attack',
+   aa:0.62,as:1400,ac:['#cc8800','#ffaa00'],sim:false},
+
+  {id:6,date:'2024-04-19',ts:+new Date('2024-04-19T01:30:00Z'),
+   title:'Israeli Strike — Isfahan',sub:'Israel hits S-300 radar near Iranian nuclear site',
+   desc:'Israel struck an S-300 air-defense radar near Isfahan using small drones — close to a major nuclear facility. Iran downplayed it. A calculated limited retaliation deliberately below the escalation threshold.',
+   type:'drone',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:32.6546,lng:51.668,label:'Isfahan, Iran'}],
+   cas:'None reported',src:'Reuters, NYT, Jerusalem Post',
+   q:'Israel drone strike Isfahan Iran April 19 2024',
+   aa:0.38,as:2500,ac:['#0055ff','#44aaff'],sim:false},
+
+  {id:7,date:'2024-07-27',ts:+new Date('2024-07-27T17:45:00Z'),
+   title:'Majdal Shams Massacre',sub:'Hezbollah rocket kills 12 children on football pitch',
+   desc:'A Hezbollah Falaq-1 rocket struck a football pitch in Majdal Shams (Golan Heights), killing 12 children aged 10-20. The deadliest attack on Israeli civilians since Oct 7. Dramatically escalated the northern front.',
+   type:'missile',imp:'critical',country:'Hezbollah',
+   origin:{lat:33.27,lng:35.2,label:'South Lebanon'},
+   targets:[{lat:33.148,lng:35.7716,label:'Majdal Shams, Golan'}],
+   cas:'12 children killed, 44 wounded',src:'Reuters, BBC, Times of Israel',
+   q:'Majdal Shams Hezbollah rocket attack children killed July 2024',
+   aa:0.08,as:3000,ac:['#ff6600','#ff2200'],sim:false},
+
+  {id:8,date:'2024-01-12',ts:+new Date('2024-01-12T02:00:00Z'),
+   title:'Operation Prosperity Guardian',sub:'US & UK launch strikes on 60+ Houthi targets',
+   desc:'US-led coalition (US, UK, AU, CA, NL) struck 60+ Houthi targets across 16 sites: radar, drone storage, launch sites, weapons depots. B-1Bs, F/A-18s from USS Eisenhower, and Tomahawk cruise missiles used.',
+   type:'airstrike',imp:'major',country:'USA',
+   origin:{lat:15.0,lng:43.0,label:'USS Eisenhower (Red Sea)'},
+   targets:[{lat:15.3694,lng:44.191,label:"Sana'a"},{lat:14.7979,lng:42.9547,label:'Hodeidah'}],
+   cas:'Unknown militia casualties',src:'Pentagon, Reuters, BBC',
+   q:'US UK strikes Yemen Houthi January 12 2024 Operation Prosperity Guardian',
+   aa:0.32,as:1800,ac:['#ffffff','#aaccff'],sim:false},
+
+  {id:9,date:'2024-09-17',ts:+new Date('2024-09-17T15:30:00Z'),
+   title:'Pager Operation',sub:'Israel detonates thousands of Hezbollah pagers simultaneously',
+   desc:'Thousands of Hezbollah members\' pagers exploded across Lebanon in a Mossad supply-chain operation. 12 killed, ~3,000 wounded. Completely decapitated Hezbollah\'s secure communications network.',
+   type:'ground',imp:'critical',country:'Israel',
+   origin:{lat:32.0,lng:34.8,label:'Israel (Mossad HQ)'},
+   targets:[{lat:33.8938,lng:35.5018,label:'Beirut, Lebanon'},{lat:33.27,lng:35.2,label:'South Lebanon'}],
+   cas:'12 killed, ~3,000 injured',src:'Reuters, NYT, BBC',
+   q:'Lebanon pager explosion Hezbollah September 17 2024',
+   aa:0.18,as:2000,ac:['#0066ff','#00ccff'],sim:false},
+
+  {id:10,date:'2024-09-27',ts:+new Date('2024-09-27T18:00:00Z'),
+   title:'Nasrallah Eliminated',sub:'Israel kills Hezbollah chief in Beirut bunker',
+   desc:'Israeli F-35I jets struck Hezbollah HQ in Dahieh suburb of Beirut using bunker-buster bombs, killing Secretary-General Hassan Nasrallah after 32 years in power. Iran declared 3 days of mourning.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:32.6651,lng:35.1795,label:'Ramat David Air Base'},
+   targets:[{lat:33.849,lng:35.49,label:'Dahieh, Beirut'}],
+   cas:'Nasrallah + senior HQ staff',src:'IDF, Reuters, Al Jazeera',
+   q:'Israel kills Hassan Nasrallah Hezbollah Beirut September 2024',
+   aa:0.22,as:1600,ac:['#0055ff','#44aaff'],sim:false},
+
+  {id:11,date:'2024-10-01',ts:+new Date('2024-10-01T00:01:00Z'),
+   title:'IDF Ground Invasion — Lebanon',sub:'Israeli forces cross border; first since 2006',
+   desc:'IDF launched ground incursion into southern Lebanon targeting Hezbollah tunnel networks and launch sites. Armored columns crossed at multiple points alongside air and naval strikes on Beirut suburbs.',
+   type:'ground',imp:'critical',country:'Israel',
+   origin:{lat:33.05,lng:35.15,label:'Northern Israel Border'},
+   targets:[{lat:33.27,lng:35.2,label:'South Lebanon'}],
+   cas:'Dozens IDF KIA, thousands Hezbollah/civilian',src:'IDF, Reuters, Al Jazeera',
+   q:'IDF ground invasion Lebanon October 2024 Hezbollah',
+   aa:0.04,as:8000,ac:['#2266ff','#4488ff'],sim:false},
+
+  {id:12,date:'2024-10-01',ts:+new Date('2024-10-01T19:00:00Z'),
+   title:'OPERATION TRUE PROMISE II',sub:'Iran fires 180 ballistic missiles — largest salvo in history',
+   desc:'Iran launched ~180 Fattah-1 hypersonic and Emad ballistic missiles at Israel — the largest single ballistic missile salvo in history against one country. Arrow-3 and US THAAD intercepted most; a few hit Nevatim runway.',
+   type:'missile',imp:'critical',country:'Iran',
+   origin:{lat:35.6892,lng:51.389,label:'Tehran, Iran'},
+   targets:[{lat:32.0853,lng:34.7818,label:'Tel Aviv'},{lat:31.2077,lng:35.0127,label:'Nevatim'},{lat:32.067,lng:34.837,label:'Mossad HQ, Glilot'}],
+   cas:'Minor — craters at Nevatim, no mass casualties',src:'IRNA, IDF, Reuters, AP',
+   q:'Operation True Promise 2 Iran missile attack Israel October 2024',
+   aa:0.58,as:1000,ac:['#cc0000','#ff6666'],sim:false},
+
+  {id:13,date:'2024-10-15',ts:+new Date('2024-10-15T00:00:00Z'),
+   title:'USS Abraham Lincoln Enters Gulf',sub:'Third US carrier strike group — Persian Gulf',
+   desc:'USS Abraham Lincoln CSG-3 entered the Persian Gulf, joining USS Eisenhower (Red Sea) and USS Gerald R. Ford (Med). Largest US naval presence in the Middle East since the 2003 Iraq War.',
+   type:'naval',imp:'major',country:'USA',
+   origin:{lat:-7.3,lng:72.4,label:'Indian Ocean (Transit)'},
+   targets:[{lat:26.0,lng:57.0,label:'Persian Gulf'}],
+   cas:'N/A',src:'US Navy, Reuters, USNI News',
+   q:'USS Abraham Lincoln Persian Gulf three carrier deployment Middle East 2024',
+   aa:0.08,as:6000,ac:['#4488ff','#aaddff'],sim:false},
+
+  {id:14,date:'2024-10-26',ts:+new Date('2024-10-26T02:00:00Z'),
+   title:'OPERATION DAYS OF REPENTANCE',sub:'Israel strikes missile production & air defenses deep inside Iran',
+   desc:'Israel\'s largest-ever strike on Iranian soil: F-35Is hit S-300 batteries in Tehran, ballistic missile production at Parchin, and military bases near Isfahan across 4 waves over 4 hours. Iran\'s southern air defenses rendered inoperable.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:35.6892,lng:51.389,label:'Tehran'},{lat:32.6546,lng:51.668,label:'Isfahan'},{lat:35.5491,lng:51.7222,label:'Parchin Military Complex'}],
+   cas:'4 Iranian soldiers KIA; major facility damage',src:'Reuters, NYT, Jerusalem Post',
+   q:'Israel strikes Iran October 26 2024 missile production air defense',
+   aa:0.52,as:1600,ac:['#0044ff','#0099ff'],sim:false},
+
+  {id:15,date:'2024-11-26',ts:+new Date('2024-11-26T00:00:00Z'),
+   title:'Lebanon Ceasefire',sub:'US-brokered 60-day ceasefire halts Lebanon war',
+   desc:'US and France-brokered ceasefire between Israel and Hezbollah. Israel retained forces in buffer zones; Hezbollah pulled north of the Litani River. Mirrored UN Resolution 1701 with stronger monitoring provisions.',
+   type:'defense',imp:'major',country:'USA',
+   origin:{lat:38.9072,lng:-77.0369,label:'Washington D.C. (Brokered)'},
+   targets:[{lat:33.8938,lng:35.5018,label:'Beirut'},{lat:31.7683,lng:35.2137,label:'Jerusalem'}],
+   cas:'N/A (ceasefire)',src:'State Dept, Reuters, BBC',
+   q:'Lebanon ceasefire November 2024 Israel Hezbollah US brokered',
+   aa:0.25,as:4000,ac:['#00ff88','#00ffcc'],sim:false},
+
+  {id:16,date:'2025-01-19',ts:+new Date('2025-01-19T00:00:00Z'),
+   title:'Gaza Ceasefire — Phase 1',sub:'Israel-Hamas deal; hostage releases begin',
+   desc:'Phased ceasefire mediated by Qatar, Egypt and the US: 42-day pause, IDF withdrawal from populated areas, 33 Israeli hostages released for ~900 Palestinian prisoners. Preceded by final IDF operations.',
+   type:'defense',imp:'critical',country:'USA',
+   origin:{lat:25.2854,lng:51.531,label:'Doha, Qatar (Mediation)'},
+   targets:[{lat:31.5017,lng:34.4674,label:'Gaza Strip'}],
+   cas:'N/A (ceasefire)',src:'Reuters, AP, Al Jazeera',
+   q:'Gaza ceasefire January 2025 hostages Hamas Israel Qatar',
+   aa:0.2,as:4000,ac:['#00ff88','#88ffcc'],sim:false},
+
+  {id:17,date:'2025-03-18',ts:+new Date('2025-03-18T06:00:00Z'),
+   title:'Gaza Ceasefire Collapses',sub:'IDF resumes full operations after deal breakdown',
+   desc:'After Hamas refused Phase 2 bridging proposals, Israel relaunched operations across Gaza. 400+ killed in first 24h. Qatar suspended mediator role. Widespread international condemnation.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:31.5017,lng:34.4674,label:'Gaza City'},{lat:31.3469,lng:34.3069,label:'Khan Younis'},{lat:31.2452,lng:34.2058,label:'Rafah'}],
+   cas:'400+ killed in first 24h (Gazan MoH)',src:'Reuters, Al Jazeera',
+   q:'Israel resumes Gaza operation March 2025 ceasefire collapse',
+   aa:0.08,as:1800,ac:['#0044ff','#3399ff'],sim:false},
+
+  {id:18,date:'2025-04-12',ts:+new Date('2025-04-12T03:00:00Z'),
+   title:'US-Iran Nuclear Talks — Oman',sub:'First direct US-Iran talks in years under Trump',
+   desc:'US envoy Steve Witkoff and Iranian FM Abbas Araghchi held first direct talks since 2022, mediated in Muscat. Focus: Iran\'s 60% enrichment and sanctions relief. Israel expressed concern about legitimizing Iran\'s program.',
+   type:'defense',imp:'major',country:'USA',
+   origin:{lat:23.588,lng:58.3829,label:'Muscat, Oman'},
+   targets:[{lat:38.9072,lng:-77.0369,label:'Washington D.C.'},{lat:35.6892,lng:51.389,label:'Tehran'}],
+   cas:'N/A (diplomacy)',src:'Reuters, WSJ, IRNA',
+   q:'US Iran nuclear talks Oman 2025 Witkoff Araghchi',
+   aa:0.3,as:5000,ac:['#00ff88','#00ccff'],sim:false},
+
+  {id:19,date:'2025-05-05',ts:+new Date('2025-05-05T14:00:00Z'),
+   title:'US Strikes Houthi Capital',sub:"B-2 bombers hit underground bunkers in Sana'a",
+   desc:"US B-2 Spirit bombers flying from Diego Garcia struck Houthi underground command bunkers using GBU-57 Massive Ordnance Penetrators. Key C2 infrastructure destroyed. Houthi leadership survived.",
+   type:'airstrike',imp:'critical',country:'USA',
+   origin:{lat:-7.3195,lng:72.4236,label:'Diego Garcia (B-2 Base)'},
+   targets:[{lat:15.3694,lng:44.191,label:"Sana'a, Yemen"}],
+   cas:'Unknown militia; civilian casualties disputed',src:'Pentagon, Reuters, Al Jazeera',
+   q:'US B-2 bomber Houthi Sanaa strike 2025 bunker buster',
+   aa:0.65,as:2000,ac:['#ffffff','#ccddff'],sim:false},
+
+  {id:20,date:'2025-08-20',ts:+new Date('2025-08-20T02:00:00Z'),
+   title:'Israeli Strike — Natanz Facility',sub:"Israel targets Iran's primary nuclear enrichment site",
+   desc:'Israel struck the Natanz uranium enrichment facility with F-35Is and armed drones. Advanced centrifuges reportedly destroyed. Iran suspended IAEA inspections and announced 90% enrichment capability.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:33.7225,lng:51.7269,label:'Natanz Nuclear Facility'}],
+   cas:'Unknown; IAEA access denied',src:'NYT, Reuters (partially confirmed)',
+   q:'Israel strikes Natanz nuclear facility Iran 2025',
+   aa:0.48,as:1600,ac:['#0033ff','#0088ff'],sim:false},
+
+  {id:21,date:'2026-01-15',ts:+new Date('2026-01-15T20:00:00Z'),
+   title:'OPERATION TRUE PROMISE III [PROJ]',sub:'Iran launches 250 missiles including Khorramshahr-4',
+   desc:'[PROJECTED] Iran\'s third major direct attack on Israel: 250 projectiles including the Khorramshahr-4 (Kheibar) MRBM. ~92% intercepted. 8 missiles struck areas near Dimona, Tel Aviv and Haifa. 23 killed.',
+   type:'missile',imp:'critical',country:'Iran',
+   origin:{lat:35.6892,lng:51.389,label:'Tehran, Iran'},
+   targets:[{lat:31.0748,lng:35.1536,label:'Dimona'},{lat:32.0853,lng:34.7818,label:'Tel Aviv'},{lat:32.794,lng:34.9896,label:'Haifa'}],
+   cas:'23 killed, 180 injured',src:'PROJECTED — based on escalation trajectory',
+   q:'Iran missile attack Israel 2026 Khorramshahr Kheibar',
+   aa:0.6,as:900,ac:['#aa0000','#ff0000'],sim:true},
+
+  {id:22,date:'2026-03-08',ts:+new Date('2026-03-08T04:00:00Z'),
+   title:'US & Israel Joint Strike — IRGC HQ [PROJ]',sub:'B-2 + F-35I hit IRGC headquarters, Tehran',
+   desc:'[PROJECTED] Joint US-Israel strike on IRGC General Staff HQ in Lavizan district, Tehran. B-2 bombers from Diego Garcia + Israeli F-35Is. Accompanied by US cyber operations disabling Iranian air defense networks.',
+   type:'airstrike',imp:'critical',country:'USA',
+   origin:{lat:-7.3195,lng:72.4236,label:'Diego Garcia'},
+   targets:[{lat:35.7597,lng:51.5,label:'IRGC HQ, Lavizan, Tehran'}],
+   cas:'IRGC commander KIA (unconfirmed)',src:'PROJECTED — based on escalation trajectory',
+   q:'US Israel joint strike IRGC Tehran 2026',
+   aa:0.7,as:1800,ac:['#8888ff','#ffffff'],sim:true},
+
+  {id:23,date:'2026-04-10',ts:+new Date('2026-04-10T00:00:00Z'),
+   title:'USS Carl Vinson — Strait of Hormuz [PROJ]',sub:'Fourth US carrier enters Persian Gulf',
+   desc:'[PROJECTED] USS Carl Vinson CSG-1 transited the Strait of Hormuz into the Persian Gulf joining USS Abraham Lincoln. Iran scrambled F-14s to shadow the carrier. Unprecedented two-carrier Persian Gulf presence.',
+   type:'naval',imp:'critical',country:'USA',
+   origin:{lat:5.0,lng:68.0,label:'Indian Ocean (Transit)'},
+   targets:[{lat:26.0,lng:54.0,label:'Persian Gulf'}],
+   cas:'N/A',src:'PROJECTED — based on US naval deployments',
+   q:'USS Carl Vinson Persian Gulf 2026 Iran',
+   aa:0.06,as:7000,ac:['#4499ff','#aaccff'],sim:true}
+];
+
+var TL_START = +new Date('2024-01-01');
+var TL_END   = +new Date('2026-04-18');
+
+/* ─── STATE ─────────────────────────────────────────────── */
+var mode        = 'live';
+var selEv       = null;
+var curTime     = TL_START;
+var isPlaying   = true;
+var spd         = 5;
+var liveInt     = null;
+var rafId       = null;
+var lastRts     = null;
+var activeEvs   = [];
+var globe;
+
+/* ─── GLOBE INIT ────────────────────────────────────────── */
+function initGlobe() {
+  var el = document.getElementById('wm-globe');
+  if (!el) { setTimeout(initGlobe, 50); return; }
+  if (typeof Globe === 'undefined') { setTimeout(initGlobe, 100); return; }
+
+  globe = Globe()(el);
+  globe
+    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+    .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+    .atmosphereColor('#00cc44')
+    .atmosphereAltitude(0.18)
+    .width(el.offsetWidth || 800)
+    .height(el.offsetHeight || 840);
+
+  setTimeout(function() {
+    globe.pointOfView({lat:31, lng:44, altitude:1.3}, 1500);
+    /* re-apply correct dimensions after layout settles */
+    globe.width(el.offsetWidth || 800).height(el.offsetHeight || 840);
+  }, 300);
+
+  buildLegend();
+  buildTicker();
+  updateClock();
+  setInterval(updateClock, 1000);
+  loadVideoIds();
+  startLive();
+
+  window.addEventListener('resize', function() {
+    globe.width(el.offsetWidth).height(el.offsetHeight);
+  });
+}
+
+/* Works whether the script runs synchronously (iframe/file) or is
+   injected into an already-loaded page (Jupyter display(HTML(...))). */
+if (typeof Globe !== 'undefined') {
+  setTimeout(initGlobe, 0);          /* already loaded — next tick */
+} else {
+  window.addEventListener('load', initGlobe);   /* wait for CDN script */
+  setTimeout(initGlobe, 1500);       /* hard fallback */
+}
+
+/* ─── GLOBE UPDATE ──────────────────────────────────────── */
+function updateGlobe() {
+  /* Two-layer arc system:
+     Layer 1 = faint guide path (solid, very dim) — shows the full trajectory
+     Layer 2 = bright projectile dot (tiny dash, fast) — the actual "moving missile/drone"
+  */
+  var arcs = [];
+  activeEvs.forEach(function(ev) {
+    var baseCol = ev.ac||['#00ff41','#00ff41'];
+    var fadeCol = [baseCol[0]+'28', baseCol[1]+'28'];
+    (ev.targets||[]).forEach(function(t) {
+      /* Guide path — full solid dim line */
+      arcs.push({
+        sLat:ev.origin.lat, sLng:ev.origin.lng, eLat:t.lat, eLng:t.lng,
+        col:fadeCol, alt:ev.aa||0.3,
+        dl:1, dg:0, spd:99999, sw:0.4, ev:ev
+      });
+      /* Projectile dot — tiny bright dash that races along the path */
+      arcs.push({
+        sLat:ev.origin.lat, sLng:ev.origin.lng, eLat:t.lat, eLng:t.lng,
+        col:baseCol, alt:ev.aa||0.3,
+        dl:0.03, dg:0.97, spd:ev.as||1800, sw:2.0, ev:ev
+      });
+    });
+  });
+
+  var activeIds = {};
+  activeEvs.forEach(function(e){ activeIds[e.id]=true; });
+
+  var pts = [];
+  EVENTS.forEach(function(ev) {
+    var isAct = activeIds[ev.id];
+    var isSel = selEv && selEv.id===ev.id;
+    var col   = IMP[ev.imp]||'#00ff41';
+    pts.push({lat:ev.origin.lat, lng:ev.origin.lng, label:ev.origin.label,
+      sz: isSel?0.6:isAct?0.45:0.2, col:isAct?col:col+'44', alt:0.005, ev:ev});
+    if (isAct) {
+      (ev.targets||[]).forEach(function(t) {
+        pts.push({lat:t.lat, lng:t.lng, label:t.label, sz:0.35, col:'#ff2222', alt:0.005, ev:ev});
+      });
+    }
+  });
+
+  var lbls = activeEvs.map(function(ev) {
+    return {lat:ev.origin.lat, lng:ev.origin.lng, text:ev.origin.label, col:TYPE_META[ev.type]&&TYPE_META[ev.type].color||'#00ff41'};
+  });
+
+  globe
+    .arcsData(arcs)
+    .arcStartLat('sLat').arcStartLng('sLng').arcEndLat('eLat').arcEndLng('eLng')
+    .arcColor('col').arcAltitude('alt').arcStroke('sw')
+    .arcDashLength('dl').arcDashGap('dg').arcDashAnimateTime('spd')
+    .onArcClick(function(d){ if(d&&d.ev) showCard(d.ev); })
+    .pointsData(pts).pointLat('lat').pointLng('lng')
+    .pointColor('col').pointRadius('sz').pointAltitude('alt')
+    .onPointClick(function(d){ if(d&&d.ev) showCard(d.ev); })
+    .htmlElementsData(lbls).htmlLat('lat').htmlLng('lng').htmlAltitude(0.015)
+    .htmlElement(function(d){
+      var el=document.createElement('div');
+      el.className='ev-label';
+      el.textContent=d.text;
+      el.style.color=d.col;
+      el.style.borderColor=d.col+'88';
+      el.style.textShadow='0 0 6px '+d.col;
+      return el;
+    });
+
+  var n = activeEvs.length;
+  document.getElementById('arc-count').textContent = n+' event'+(n!==1?'s':'')+' active';
+  document.getElementById('ops-count').textContent = n;
+}
+
+/* ─── LIVE MODE ─────────────────────────────────────────── */
+function startLive() {
+  stopAll();
+  activeEvs = pickRandom(3);
+  updateGlobe();
+  liveInt = setInterval(function(){
+    var prevIds = {};
+    activeEvs.forEach(function(e){ prevIds[e.id]=true; });
+    var pool = EVENTS.filter(function(e){ return !prevIds[e.id]; });
+    var next = pool.length ? pool[Math.floor(Math.random()*pool.length)] : EVENTS[Math.floor(Math.random()*EVENTS.length)];
+    activeEvs = activeEvs.slice(-2).concat([next]);
+    updateGlobe();
+  }, 3500);
+}
+
+function pickRandom(n) {
+  return EVENTS.slice().sort(function(){ return Math.random()-0.5; }).slice(0,n);
+}
+
+/* ─── TIMELINE MODE ─────────────────────────────────────── */
+var MS_PER_REAL = 86400;
+var WIN = 12*3600*1000;
+
+function startTimeline() {
+  stopAll();
+  buildDots();
+  syncTimelineUI();
+  if (isPlaying) runTimeline();
+}
+
+function runTimeline() {
+  lastRts = null;
+  rafId = requestAnimationFrame(function tick(ts) {
+    if (lastRts!==null) {
+      var delta = ts-lastRts;
+      curTime = Math.min(curTime+delta*MS_PER_REAL*spd, TL_END);
+      if (curTime>=TL_END) curTime=TL_START;
+    }
+    lastRts=ts;
+    activeEvs = EVENTS.filter(function(e){ return e.ts<=curTime && e.ts>=curTime-WIN; });
+    updateGlobe();
+    syncTimelineUI();
+    if (isPlaying) rafId=requestAnimationFrame(tick);
+  });
+}
+
+function syncTimelineUI() {
+  var pct = (curTime-TL_START)/(TL_END-TL_START);
+  document.getElementById('tl-range').value = Math.round(pct*1000);
+  var d = new Date(curTime);
+  var MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('tl-date').textContent =
+    String(d.getUTCDate()).padStart(2,'0')+' '+MN[d.getUTCMonth()]+' '+d.getUTCFullYear();
+  document.querySelectorAll('.tl-dot').forEach(function(dot){
+    var ets=parseInt(dot.dataset.ts);
+    var act=ets<=curTime&&ets>=curTime-WIN;
+    dot.style.opacity=act?'1':'0.3';
+    dot.style.transform=act?'translateX(-50%) scale(1.5)':'translateX(-50%)';
+  });
+}
+
+function buildDots() {
+  var cont = document.getElementById('wm-tl-dots');
+  cont.innerHTML='';
+  var total=TL_END-TL_START;
+  EVENTS.forEach(function(ev){
+    var pct=((ev.ts-TL_START)/total)*100;
+    var btn=document.createElement('button');
+    btn.className='tl-dot btn';
+    btn.dataset.ts=ev.ts;
+    btn.title=ev.title;
+    btn.style.cssText='position:absolute;left:'+pct+'%;bottom:0;transform:translateX(-50%);padding:0;opacity:0.3;transition:all 0.3s;cursor:pointer;background:none;border:none';
+    var color=IMP[ev.imp]||'#00ff41';
+    var sz=ev.imp==='critical'?8:5;
+    btn.innerHTML='<span style="display:block;width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+color+';box-shadow:0 0 4px '+color+'"></span>';
+    btn.addEventListener('click',function(){ curTime=ev.ts; showCard(ev); syncTimelineUI(); });
+    cont.appendChild(btn);
+  });
+}
+
+/* ─── MODE SWITCH ───────────────────────────────────────── */
+function setMode(m) {
+  mode=m;
+  selEv=null;
+  document.getElementById('wm-card').style.display='none';
+  var bl=document.getElementById('btn-live'), bt=document.getElementById('btn-tl');
+  var tp=document.getElementById('wm-tl'),    li=document.getElementById('wm-live-info');
+  if (m==='live') {
+    bl.className='mbtn al'; bt.className='mbtn';
+    tp.style.display='none'; li.style.display='block';
+    startLive();
+  } else {
+    bl.className='mbtn'; bt.className='mbtn at';
+    tp.style.display='block'; li.style.display='none';
+    startTimeline();
+  }
+}
+
+function stopAll() {
+  if (liveInt){ clearInterval(liveInt); liveInt=null; }
+  if (rafId){ cancelAnimationFrame(rafId); rafId=null; }
+}
+
+function togglePlay() {
+  isPlaying=!isPlaying;
+  document.getElementById('tl-playbtn').innerHTML=isPlaying?'&#9646;&#9646;':'&#9654;';
+  if (isPlaying){ lastRts=null; runTimeline(); }
+  else if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+}
+
+function onScrub(val) {
+  curTime=TL_START+(val/1000)*(TL_END-TL_START);
+  activeEvs=EVENTS.filter(function(e){ return e.ts<=curTime&&e.ts>=curTime-WIN; });
+  updateGlobe(); syncTimelineUI();
+}
+
+function setSpeed(s) {
+  spd=s;
+  document.querySelectorAll('.speed-btn').forEach(function(b){
+    b.classList.toggle('act', parseInt(b.textContent)===s);
+  });
+}
+
+/* ─── EVENT CARD ────────────────────────────────────────── */
+function showCard(ev) {
+  selEv=ev;
+  var card=document.getElementById('wm-card');
+  var m=TYPE_META[ev.type]||{};
+  var c=m.color||'#00ff41';
+  var ic=IMP[ev.imp]||'#00ff41';
+  var cc=CC[ev.country]||'#888';
+  var tags=(ev.tags||[]).map(function(t){ return '<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(0,40,0,0.8);color:#336633;border:1px solid #1a3d1a;display:inline-block;margin:1px">'+t+'</span>'; }).join('');
+  var tgts=(ev.targets||[]).map(function(t){ return '<div style="font-size:11px;color:#66cc88;margin-left:6px">&#8627; '+t.label+'</div>'; }).join('');
+  card.style.cssText='position:absolute;right:16px;top:110px;width:300px;z-index:30;display:flex;flex-direction:column;border-radius:6px;overflow:hidden;max-height:calc(100% - 210px);background:rgba(0,8,0,0.95);border:1px solid '+c+'44;box-shadow:0 0 20px '+c+'11;animation:fadeIn 0.3s ease';
+  card.innerHTML='<div style="padding:10px 12px;border-bottom:1px solid '+c+'22;display:flex;gap:8px;align-items:flex-start">'
+    +'<div style="flex:1;min-width:0">'
+    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">'
+    +(ev.imp==='critical'?'<span style="font-size:9px;font-weight:bold;padding:2px 6px;border-radius:3px;background:'+ic+'22;color:'+ic+';border:1px solid '+ic+'44">&#9685; CRITICAL</span>':'')
+    +(ev.sim?'<span style="font-size:9px;font-weight:bold;padding:2px 6px;border-radius:3px;background:rgba(80,60,0,0.5);color:#cc9900;border:1px solid #665500">PROJECTED</span>':'')
+    +'</div>'
+    +'<div style="font-size:11px;font-weight:bold;color:'+c+';text-shadow:0 0 6px '+c+';line-height:1.3">'+ev.title+'</div>'
+    +'<div style="font-size:11px;color:#66cc88;margin-top:2px;line-height:1.3">'+ev.sub+'</div>'
+    +'</div>'
+    +'<button onclick="closeCard()" style="cursor:pointer;background:none;border:none;color:#336633;font-size:20px;line-height:1;flex-shrink:0">&#215;</button>'
+    +'</div>'
+    +'<div style="flex:1;overflow-y:auto;padding:12px">'
+    +'<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap">'
+    +'<div><div style="font-size:9px;color:#336633;letter-spacing:2px">DATE</div><div style="font-size:11px;font-weight:bold;color:#00ff41">'+ev.date+'</div></div>'
+    +'<div><div style="font-size:9px;color:#336633;letter-spacing:2px">ACTOR</div><div style="font-size:11px;font-weight:bold;color:'+cc+'">'+ev.country+'</div></div>'
+    +'<div><div style="font-size:9px;color:#336633;letter-spacing:2px">TYPE</div><div style="font-size:11px;font-weight:bold;color:#00ff41">'+ev.type.toUpperCase()+'</div></div>'
+    +'</div>'
+    +'<div style="font-size:11px;color:#99ccaa;line-height:1.6;margin-bottom:10px">'+ev.desc+'</div>'
+    +'<div style="margin-bottom:8px">'
+    +'<div style="font-size:9px;color:#336633;letter-spacing:2px">ORIGIN</div>'
+    +'<div style="font-size:11px;color:#66cc88;margin-left:6px">'+(ev.origin&&ev.origin.label||'')+'</div>'
+    +'<div style="font-size:9px;color:#336633;letter-spacing:2px;margin-top:4px">TARGETS</div>'
+    +tgts+'</div>'
+    +(ev.cas?'<div style="margin-bottom:8px"><div style="font-size:9px;color:#336633;letter-spacing:2px">CASUALTIES</div><div style="font-size:11px;margin-left:6px;color:'+(ev.cas.indexOf('killed')>-1||ev.cas.indexOf('KIA')>-1?'#ff9999':'#00ff88')+'">'+ev.cas+'</div></div>':'')
+    +'<div style="margin-bottom:8px">'+tags+'</div>'
+    +'<div style="font-size:10px;color:#336633">SOURCE: <span style="color:#557755">'+ev.src+'</span></div>'
+    +'</div>'
+    +'<div style="padding:10px 12px;border-top:1px solid '+c+'22">'
+    +'<button onclick="openVideo()" style="width:100%;padding:8px;border-radius:4px;cursor:pointer;font-family:\'Courier New\',monospace;font-size:11px;font-weight:bold;letter-spacing:2px;background:'+c+'22;border:1px solid '+c+'55;color:'+c+';text-shadow:0 0 6px '+c+'">&#9654; WATCH VIDEO FOOTAGE</button>'
+    +'</div>';
+  updateGlobe();
+}
+
+function closeCard() {
+  selEv=null;
+  document.getElementById('wm-card').style.display='none';
+  updateGlobe();
+}
+
+/* ─── VIDEO IDs (populated by loadVideoIds from video_ids.json) ── */
+var VIDEO_IDS = {};
+
+function loadVideoIds() {
+  fetch('video_ids.json')
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(data){ if(data) VIDEO_IDS=data; })
+    .catch(function(){});  /* silent — falls back to search link */
+}
+
+/* ─── VIDEO MODAL ───────────────────────────────────────── */
+function openVideo() {
+  if (!selEv) return;
+  var ev=selEv, m=TYPE_META[ev.type]||{}, c=m.color||'#00ff41';
+  var q=encodeURIComponent(ev.q||ev.title);
+  var ytSearch='https://www.youtube.com/results?search_query='+q;
+  var ytId=VIDEO_IDS[String(ev.id)];
+
+  var inner=document.getElementById('wm-modal-inner');
+  inner.style.cssText='border:1px solid '+c+'55;box-shadow:0 0 40px '+c+'22;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;width:min(900px,96%);max-height:92%;background:rgba(0,8,0,0.97)';
+
+  /* Header */
+  var html='<div style="padding:12px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid '+c+'22;flex-shrink:0">'
+    +'<div><div style="font-size:9px;color:#336633;letter-spacing:3px">VIDEO INTELLIGENCE</div>'
+    +'<div style="font-size:13px;font-weight:bold;color:'+c+';text-shadow:0 0 8px '+c+'">'+ev.title+'</div>'
+    +'<div style="font-size:11px;color:#66cc88">'+ev.sub+'</div></div>'
+    +'<button onclick="closeVideo()" style="cursor:pointer;background:none;border:none;color:#336633;font-size:28px;line-height:1;flex-shrink:0;margin-left:16px">&#215;</button>'
+    +'</div>';
+
+  if (ytId) {
+    /* ── Embedded player when real video ID is known ── */
+    html+='<div style="flex:1;background:#000;position:relative;min-height:400px">'
+      +'<iframe src="https://www.youtube-nocookie.com/embed/'+ytId+'?autoplay=1&rel=0&modestbranding=1" '
+      +'style="position:absolute;inset:0;width:100%;height:100%;border:none" '
+      +'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" '
+      +'allowfullscreen></iframe>'
+      +'</div>';
+  } else {
+    /* ── Search fallback when no ID available ── */
+    html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:20px;background:rgba(0,6,0,0.6)">'
+      +'<div style="font-size:52px;opacity:0.5">&#127909;</div>'
+      +'<div style="text-align:center">'
+      +'<div style="font-size:14px;color:#99ccaa;margin-bottom:8px;letter-spacing:1px">Video coverage available on YouTube</div>'
+      +'<div style="font-size:12px;color:#557755;font-style:italic">&ldquo;'+ev.title+' '+ev.date+'&rdquo;</div>'
+      +'<div style="font-size:11px;color:#1a3d1a;margin-top:8px">Run the YouTube scraper cell in the notebook to enable embedded video</div>'
+      +'</div>'
+      +'<a href="'+ytSearch+'" target="_blank" rel="noopener" '
+      +'style="display:inline-flex;align-items:center;gap:12px;padding:14px 28px;border-radius:6px;text-decoration:none;'
+      +'background:'+c+'22;border:1px solid '+c+'66;color:'+c+';font-size:13px;font-weight:bold;font-family:\'Courier New\',monospace;'
+      +'letter-spacing:2px;text-shadow:0 0 8px '+c+';box-shadow:0 0 20px '+c+'22">'
+      +'&#128269;&nbsp; SEARCH ON YOUTUBE</a>'
+      +'</div>';
+  }
+
+  html+='<div style="padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#336633;border-top:1px solid '+c+'11;flex-shrink:0">'
+    +'<span>SOURCE: '+ev.src+'</span>'
+    +'<a href="'+ytSearch+'" target="_blank" rel="noopener" style="color:#336633;text-decoration:underline">YouTube &#8599;</a>'
+    +(ev.sim?'<span style="color:#cc9900;font-weight:bold">&#9888; PROJECTED</span>':'<span>'+ev.date+'</span>')
+    +'</div>';
+
+  inner.innerHTML=html;
+  document.getElementById('wm-modal').style.display='flex';
+}
+
+function closeVideo() {
+  document.getElementById('wm-modal').style.display='none';
+  document.getElementById('wm-modal-inner').innerHTML='';
+}
+
+/* ─── FULLSCREEN ────────────────────────────────────────── */
+function toggleFullscreen() {
+  var container = document.getElementById('wm');
+  if (!document.fullscreenElement) {
+    (container.requestFullscreen || container.webkitRequestFullscreen || container.mozRequestFullScreen).call(container)
+      .catch(function(e){ console.log('Fullscreen error:', e); });
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen).call(document);
+  }
+}
+
+document.addEventListener('fullscreenchange', function() {
+  var btn = document.getElementById('fs-btn');
+  if (!btn) return;
+  if (document.fullscreenElement) {
+    btn.innerHTML='&#9974; EXIT';
+    btn.title='Exit Fullscreen (Esc)';
+  } else {
+    btn.innerHTML='&#9974; FULL';
+    btn.title='Fullscreen (F)';
+  }
+  /* Resize globe to fill the new dimensions */
+  setTimeout(function(){
+    var el=document.getElementById('wm-globe');
+    if (globe && el) globe.width(el.offsetWidth).height(el.offsetHeight);
+  }, 200);
+});
+document.addEventListener('webkitfullscreenchange', function() {
+  document.dispatchEvent(new Event('fullscreenchange'));
+});
+
+/* ─── VIEW PRESETS ──────────────────────────────────────── */
+function flyTo(lat, lng, alt) {
+  if (globe) globe.pointOfView({lat:lat, lng:lng, altitude:alt}, 1000);
+}
+
+/* ─── KEYBOARD SHORTCUTS ────────────────────────────────── */
+document.addEventListener('keydown', function(e){
+  if (e.key==='Escape') closeVideo();
+  if (e.key==='f' || e.key==='F') toggleFullscreen();
+});
+
+/* ─── LEGEND ────────────────────────────────────────────── */
+function buildLegend() {
+  var el=document.getElementById('wm-ltypes');
+  Object.keys(TYPE_META).forEach(function(t) {
+    var m=TYPE_META[t];
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:4px';
+    row.innerHTML='<svg width="28" height="10" viewBox="0 0 28 10"><path d="M 2 8 Q 14 0 26 8" stroke="'+m.color+'" stroke-width="2" fill="none" stroke-dasharray="4 2"/></svg>'
+      +'<span style="font-size:10px;color:#66cc88">'+m.label+'</span>';
+    el.appendChild(row);
+  });
+}
+
+/* ─── NEWS TICKER ───────────────────────────────────────── */
+function buildTicker() {
+  var headlines=[
+    '[Reuters] Israel signals readiness for further strikes if nuclear talks fail',
+    '[AP] Iran enriches uranium to 84% purity — IAEA gravely concerned',
+    '[Defense News] US deploys additional THAAD battery to Israel',
+    "[Lloyd's List] Houthi attack damages Singapore-flagged tanker in Red Sea",
+    '[Times of Israel] Netanyahu: military option against Iran remains on table',
+    '[WSJ] US-Iran Oman talks stall over enrichment caps — White House',
+    '[IDF] 300+ rockets fired from Gaza since ceasefire collapsed',
+    '[NYT] Russia reportedly shares satellite intel with Iran — US officials',
+    '[Bloomberg] Saudi Arabia warns regional war could spike oil to $200/barrel',
+    '[Tasnim] IRGC test-fires Fatah-2 hypersonic in Persian Gulf exercise',
+    '[BBC] UK joins US in Red Sea escort operations amid record Houthi attacks',
+    '[Haaretz] Israel air force conducts largest-ever exercise simulating Iran strikes',
+    '[Reuters] Hezbollah fires 80 rockets toward Galilee — IDF intercepts majority',
+    '[FT] Oil surges 4% as market prices in potential Strait of Hormuz closure',
+    '[Pentagon] USS Carl Vinson combat-ready in Persian Gulf as Iran tensions rise'
+  ];
+  var doubled=headlines.concat(headlines);
+  document.getElementById('wm-ttrack').textContent=doubled.map(function(h){ return h+'     \u25c6     '; }).join('');
+}
+
+/* ─── CLOCK ─────────────────────────────────────────────── */
+function updateClock() {
+  var now=new Date();
+  var MN=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  document.getElementById('wm-date').textContent=String(now.getUTCDate()).padStart(2,'0')+' '+MN[now.getUTCMonth()]+' '+now.getUTCFullYear();
+  document.getElementById('wm-clock').textContent=String(now.getUTCHours()).padStart(2,'0')+':'+String(now.getUTCMinutes()).padStart(2,'0')+':'+String(now.getUTCSeconds()).padStart(2,'0')+' UTC';
+}
+</script>
+</body>
+</html>
+</file>
+
+</files>
