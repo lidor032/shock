@@ -2,6 +2,22 @@ import { TYPE_COLORS, COUNTRY_COLORS } from '../utils/colors'
 import { EVENT_TYPES, COUNTRIES } from '../data/events'
 import { useState } from 'react'
 
+// Strike types — fast projectile events
+const STRIKE_TYPES = [
+  EVENT_TYPES.MISSILE,
+  EVENT_TYPES.AIRSTRIKE,
+  EVENT_TYPES.DRONE,
+  EVENT_TYPES.NAVAL,
+  EVENT_TYPES.DEFENSE,
+  EVENT_TYPES.GROUND,
+]
+
+// Logistical movement types — slow surface/low-altitude routes
+const MOVEMENT_TYPES = [
+  EVENT_TYPES.DEPLOYMENT,
+  EVENT_TYPES.AIRLIFT,
+]
+
 export default function Legend() {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -18,15 +34,41 @@ export default function Legend() {
 
         {!collapsed && (
           <div className="space-y-3">
-            {/* Event types */}
+            {/* Combat strike types */}
             <div>
               <div className="text-green-700 text-xs tracking-widest mb-1">STRIKE TYPE</div>
-              {Object.entries(TYPE_COLORS).map(([type, meta]) => (
-                <div key={type} className="flex items-center gap-2 mb-1">
-                  <ArcSwatch color={meta.primary} />
-                  <span className="text-xs text-green-400">{meta.icon} {meta.label}</span>
-                </div>
-              ))}
+              {STRIKE_TYPES.map((type) => {
+                const meta = TYPE_COLORS[type]
+                if (!meta) return null
+                return (
+                  <div key={type} className="flex items-center gap-2 mb-1">
+                    <ProjectileArcSwatch color={meta.primary} />
+                    <span className="text-xs text-green-400">{meta.icon} {meta.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="border-t border-green-900" />
+
+            {/* Force deployment / logistics */}
+            <div>
+              <div className="text-green-700 text-xs tracking-widest mb-1">DEPLOYMENTS</div>
+              {MOVEMENT_TYPES.map((type) => {
+                const meta = TYPE_COLORS[type]
+                if (!meta) return null
+                return (
+                  <div key={type} className="flex items-center gap-2 mb-1">
+                    <DeploymentArcSwatch color={meta.primary} flat={type === EVENT_TYPES.DEPLOYMENT} />
+                    <span className="text-xs" style={{ color: meta.primary }}>
+                      {meta.icon} {meta.label}
+                    </span>
+                  </div>
+                )
+              })}
+              <div className="text-green-900 text-xs mt-1 leading-tight">
+                Slow dashed route · surface-level
+              </div>
             </div>
 
             <div className="border-t border-green-900" />
@@ -62,10 +104,24 @@ export default function Legend() {
   )
 }
 
-function ArcSwatch({ color }) {
+// Short fast dash — represents a projectile/strike arc
+function ProjectileArcSwatch({ color }) {
   return (
     <svg width="28" height="10" viewBox="0 0 28 10">
       <path d="M 2 8 Q 14 0 26 8" stroke={color} strokeWidth="2" fill="none" strokeDasharray="4 2" />
+    </svg>
+  )
+}
+
+// Longer, more spaced dashes — represents a slow logistical convoy route.
+// flat=true draws a straight line (naval surface route); false curves slightly (airlift).
+function DeploymentArcSwatch({ color, flat }) {
+  const d = flat
+    ? 'M 2 8 L 26 8'                  // straight line — hugs surface (naval)
+    : 'M 2 8 Q 14 3 26 8'            // very slight curve — airlift
+  return (
+    <svg width="28" height="10" viewBox="0 0 28 10">
+      <path d={d} stroke={color} strokeWidth="2.2" fill="none" strokeDasharray="5 3" opacity="0.85" />
     </svg>
   )
 }
