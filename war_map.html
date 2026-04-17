@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box }
+body { background:#000; color:#00ff41; font-family:'Courier New',monospace }
+#wm { position:relative; width:100%; height:840px; background:#000; overflow:hidden }
+#wm::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.1) 2px,rgba(0,0,0,0.1) 4px); pointer-events:none; z-index:9999 }
+.mp { background:rgba(0,8,0,0.9); border:1px solid rgba(0,255,65,0.35); box-shadow:0 0 10px rgba(0,255,65,0.12),inset 0 0 10px rgba(0,255,65,0.04) }
+.glow { text-shadow:0 0 8px #00ff41,0 0 16px #00ff41 }
+.glow-r { text-shadow:0 0 8px #ff2222 }
+.glow-a { text-shadow:0 0 8px #ffb000 }
+.glow-b { text-shadow:0 0 8px #0088ff }
+.btn { cursor:pointer; background:none; border:none; font-family:inherit; color:inherit }
+#wm-hdr { position:absolute; top:0; left:0; right:0; z-index:30; display:flex; align-items:stretch }
+#wm-hdr-l { display:flex; align-items:center; gap:12px; padding:8px 16px; border-right:1px solid rgba(0,255,65,0.2) }
+#wm-hdr-c { flex:1; display:flex; align-items:center; justify-content:center }
+#wm-hdr-r { display:flex; align-items:center; gap:16px; padding:8px 16px; border-left:1px solid rgba(0,255,65,0.2) }
+.mbtn { padding:8px 18px; font-size:11px; font-weight:bold; letter-spacing:3px; transition:all 0.2s; cursor:pointer; background:none; border:none; font-family:inherit }
+.mbtn.al { background:rgba(80,0,0,0.8); color:#ff4444; border-bottom:2px solid #ff4444 }
+.mbtn.at { background:rgba(0,40,0,0.8); color:#00ff41; border-bottom:2px solid #00ff41 }
+.mbtn:not(.al):not(.at) { color:#336633 }
+#wm-ticker { position:absolute; top:52px; left:0; right:0; z-index:20; display:flex; align-items:center; overflow:hidden; height:26px; background:rgba(0,8,0,0.9); border-bottom:1px solid rgba(0,255,65,0.15) }
+#wm-tlabel { flex-shrink:0; background:#4d0000; border-right:1px solid #660000; padding:0 10px; height:100%; display:flex; align-items:center; gap:6px; font-size:10px; font-weight:bold; letter-spacing:2px; color:#ff9999 }
+#wm-ttrack { white-space:nowrap; display:inline-block; font-size:11px; color:#99ffbb; animation:tick 100s linear infinite; padding-left:100% }
+#wm-ttrack:hover { animation-play-state:paused }
+@keyframes tick { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+#wm-card { position:absolute; right:16px; top:110px; width:300px; z-index:30; display:none; border-radius:6px; overflow:hidden; max-height:calc(100% - 210px); display:none; flex-direction:column; background:rgba(0,8,0,0.95) }
+#wm-modal { position:absolute; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px) }
+#wm-modal-inner { border-radius:8px; overflow:hidden; display:flex; flex-direction:column; width:min(860px,96%); max-height:90%; background:rgba(0,8,0,0.97) }
+#wm-legend { position:absolute; bottom:84px; right:16px; z-index:30; border-radius:6px; padding:12px; min-width:170px }
+#wm-tl { position:absolute; bottom:0; left:0; right:0; z-index:30; display:none; border-top:1px solid rgba(0,255,65,0.2) }
+#wm-tl-dots { position:relative; height:22px; margin:8px 16px 2px }
+#tl-range { width:100%; -webkit-appearance:none; appearance:none; height:4px; background:rgba(0,255,65,0.2); border-radius:2px; outline:none }
+#tl-range::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:#00ff41; cursor:pointer; box-shadow:0 0 6px #00ff41 }
+#wm-live-info { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:30; padding:8px 24px; text-align:center; border-radius:6px }
+#wm-globe { position:absolute; inset:0 }
+.ev-label { padding:2px 6px; background:rgba(0,0,0,0.85); font-size:10px; font-family:'Courier New',monospace; pointer-events:none; white-space:nowrap; border:1px solid rgba(0,255,65,0.4) }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.ldot { animation:blink 1s infinite }
+.speed-btn { padding:2px 8px; font-size:10px; border-radius:3px; border:1px solid #1a3d1a; color:#336633; cursor:pointer; background:none; font-family:inherit; transition:all 0.2s }
+.speed-btn.act { border-color:#00ff41; color:#00ff41; background:rgba(0,255,65,0.1) }
+::-webkit-scrollbar { width:4px }
+::-webkit-scrollbar-track { background:#000 }
+::-webkit-scrollbar-thumb { background:rgba(0,255,65,0.4) }
+</style>
+</head>
+<body>
+<div id="wm">
+  <div id="wm-globe"></div>
+
+  <!-- HEADER -->
+  <div id="wm-hdr" class="mp">
+    <div id="wm-hdr-l" class="mp">
+      <div>
+        <div style="font-size:9px;color:#336633;letter-spacing:3px">OSINT THEATER MAP</div>
+        <div style="font-size:13px;font-weight:bold;letter-spacing:2px" class="glow">IL / IR / US CONFLICT</div>
+      </div>
+      <div style="border-left:1px solid #1a3d1a;padding-left:12px;font-size:11px">
+        <div style="color:#336633" id="wm-date">-- --- ----</div>
+        <div style="font-weight:bold" class="glow" id="wm-clock">--:--:-- UTC</div>
+      </div>
+    </div>
+    <div id="wm-hdr-c">
+      <div class="mp" style="display:flex;border-radius:4px;overflow:hidden">
+        <button id="btn-live" class="mbtn al" onclick="setMode('live')">
+          <span class="ldot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff4444;margin-right:6px;vertical-align:middle"></span>LIVE
+        </button>
+        <button id="btn-tl" class="mbtn" onclick="setMode('timeline')">&#9201; TIMELINE</button>
+      </div>
+    </div>
+    <div id="wm-hdr-r" class="mp">
+      <div style="text-align:center">
+        <div style="font-size:9px;color:#336633;letter-spacing:2px">IRAN THREAT</div>
+        <div style="font-size:12px;font-weight:bold" class="glow-r">CRITICAL</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;color:#336633;letter-spacing:2px">ACTIVE OPS</div>
+        <div style="font-size:12px;font-weight:bold" class="glow-a" id="ops-count">3</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;color:#336633;letter-spacing:2px">US CARRIERS</div>
+        <div style="font-size:12px;font-weight:bold" class="glow-b">2</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEWS TICKER -->
+  <div id="wm-ticker">
+    <div id="wm-tlabel">
+      <span class="ldot" style="width:8px;height:8px;border-radius:50%;background:#ff4444;display:inline-block"></span>
+      LIVE NEWS
+    </div>
+    <div style="flex:1;overflow:hidden;padding-left:12px">
+      <span id="wm-ttrack"></span>
+    </div>
+  </div>
+
+  <!-- EVENT CARD (populated by JS) -->
+  <div id="wm-card"></div>
+
+  <!-- VIDEO MODAL -->
+  <div id="wm-modal" onclick="if(event.target===this)closeVideo()">
+    <div id="wm-modal-inner"></div>
+  </div>
+
+  <!-- LEGEND -->
+  <div id="wm-legend" class="mp">
+    <div style="font-size:10px;letter-spacing:3px;font-weight:bold;margin-bottom:8px" class="glow">LEGEND</div>
+    <div style="font-size:9px;color:#336633;letter-spacing:2px;margin-bottom:4px">STRIKE TYPE</div>
+    <div id="wm-ltypes"></div>
+    <div style="border-top:1px solid #1a3d1a;margin:8px 0"></div>
+    <div style="font-size:10px;color:#cc9900">&#128374; Projected scenarios marked</div>
+  </div>
+
+  <!-- TIMELINE PANEL -->
+  <div id="wm-tl" class="mp">
+    <div id="wm-tl-dots"></div>
+    <div style="padding:0 16px"><input type="range" id="tl-range" min="0" max="1000" value="0" oninput="onScrub(this.value)"></div>
+    <div style="padding:6px 16px 12px;display:flex;align-items:center;gap:12px">
+      <button class="btn" id="tl-playbtn" onclick="togglePlay()" style="color:#00ff41;font-size:16px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid #1a3d1a;border-radius:4px">&#9654;</button>
+      <div style="display:flex;gap:4px">
+        <button class="speed-btn" onclick="setSpeed(1)">1x</button>
+        <button class="speed-btn act" onclick="setSpeed(5)">5x</button>
+        <button class="speed-btn" onclick="setSpeed(20)">20x</button>
+        <button class="speed-btn" onclick="setSpeed(100)">100x</button>
+      </div>
+      <div style="flex:1;text-align:center">
+        <span style="font-size:13px;font-weight:bold" class="glow" id="tl-date">01 Jan 2024</span>
+      </div>
+      <div style="font-size:10px;color:#336633">Jan 2024 &#8212; Apr 2026</div>
+    </div>
+  </div>
+
+  <!-- LIVE INFO -->
+  <div id="wm-live-info" class="mp">
+    <div style="font-size:9px;color:#336633;letter-spacing:2px">ACTIVE OPERATIONS</div>
+    <div style="font-size:12px;font-weight:bold" class="glow" id="arc-count">3 arcs tracked</div>
+    <div style="font-size:10px;color:#336633;margin-top:2px">Click any arc or marker for details</div>
+  </div>
+
+  <!-- CORNER NOTE -->
+  <div style="position:absolute;bottom:88px;left:16px;z-index:20;color:#1a3d1a;font-size:10px;pointer-events:none;line-height:1.6">
+    <div>&#9672; DATA: OSINT / PUBLIC REPORTING</div>
+    <div>&#9672; SIMULATED EVENTS MARKED &#9672;</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/globe.gl"></script>
+<script>
+'use strict';
+
+/* ─── TYPE / COLOR MAPS ─────────────────────────────────── */
+var TYPE_META = {
+  missile:   {color:'#ff2222', icon:'&#128640;', label:'Missile / Rocket'},
+  airstrike: {color:'#0088ff', icon:'&#9992;&#65039;', label:'Airstrike'},
+  drone:     {color:'#ff8800', icon:'&#128760;', label:'Drone Attack'},
+  naval:     {color:'#00ccff', icon:'&#9875;', label:'Naval Operation'},
+  defense:   {color:'#00ff88', icon:'&#128737;&#65039;', label:'Defense / Diplomacy'},
+  ground:    {color:'#ffdd00', icon:'&#129678;', label:'Ground Operation'}
+};
+
+var IMP = {critical:'#ff2222', major:'#ffaa00', moderate:'#00ff41', minor:'#557755'};
+var CC  = {'Iran':'#cc0000','Israel':'#0055cc','USA':'#ffffff','Hezbollah':'#cc6600','Houthi':'#cc9900','Iraq PMF':'#884400'};
+
+/* ─── EVENTS DATA ───────────────────────────────────────── */
+var EVENTS = [
+  {id:1,date:'2024-01-28',ts:+new Date('2024-01-28T04:30:00Z'),
+   title:'Tower 22 Drone Strike',sub:'Iran-backed militia kills 3 US soldiers in Jordan',
+   desc:'An Iran-backed Iraqi militia launched an attack drone that struck US base Tower 22 in Jordan. Three US Army Reserve soldiers were killed and 47 wounded — the first US combat deaths in the region since Oct 7.',
+   type:'drone',imp:'critical',country:'Iraq PMF',
+   origin:{lat:33.3152,lng:44.3661,label:'Baghdad, Iraq'},
+   targets:[{lat:32.5,lng:38.5,label:'Tower 22, Jordan'}],
+   cas:'3 US KIA, 47 WIA',src:'Reuters, AP, DoD',
+   q:'Tower 22 drone attack Jordan US soldiers killed 2024',
+   aa:0.12,as:3500,ac:['#ff6600','#ff0000'],sim:false},
+
+  {id:2,date:'2024-02-02',ts:+new Date('2024-02-02T22:00:00Z'),
+   title:'Operation Inherent Resolve Retaliation',sub:'US strikes 85 Iran-linked targets in Iraq & Syria',
+   desc:'Following Tower 22, the US launched strikes on 85 targets across Iraq and Syria linked to IRGC. B-1B bombers dropped 125 precision munitions on C2, rocket storage, and logistics facilities.',
+   type:'airstrike',imp:'critical',country:'USA',
+   origin:{lat:35.0,lng:26.0,label:'US Forces (Med + CONUS)'},
+   targets:[{lat:33.3152,lng:44.3661,label:'Baghdad'},{lat:33.5138,lng:36.2765,label:'Damascus'},{lat:33.4625,lng:38.6453,label:'Al-Tanf'}],
+   cas:'Unknown militia casualties',src:'Pentagon, Reuters, BBC',
+   q:'US airstrike Iraq Syria retaliation Tower 22 February 2024',
+   aa:0.35,as:1800,ac:['#ffffff','#aaddff'],sim:false},
+
+  {id:3,date:'2024-04-01',ts:+new Date('2024-04-01T13:00:00Z'),
+   title:'Israeli Strike — Iranian Consulate Damascus',sub:'F-35 destroys IRGC compound, kills 2 generals',
+   desc:'Israeli F-35 jets struck the Iranian consular annex in Damascus, killing 16 people including two senior IRGC generals. The strike triggered Iran\'s vow of direct retaliation on Israeli soil.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:33.5138,lng:36.2765,label:'Damascus, Syria'}],
+   cas:'16 killed (2 IRGC generals)',src:'Reuters, Times of Israel, IRNA',
+   q:'Israel strike Iranian consulate Damascus April 2024 IRGC generals',
+   aa:0.25,as:1500,ac:['#0044ff','#00aaff'],sim:false},
+
+  {id:4,date:'2024-04-13',ts:+new Date('2024-04-13T23:30:00Z'),
+   title:'OPERATION TRUE PROMISE',sub:'Iran fires 170 drones + 120 ballistic missiles at Israel',
+   desc:'Iran\'s first-ever direct attack on Israeli territory: ~170 Shahed drones, 30 cruise missiles, 120 ballistic missiles. Coordinated from Iran, Iraq, Yemen and Lebanon. Over 99% intercepted by Israel, US, UK and Jordan.',
+   type:'missile',imp:'critical',country:'Iran',
+   origin:{lat:35.6892,lng:51.389,label:'Tehran, Iran'},
+   targets:[{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},{lat:31.7683,lng:35.2137,label:'Jerusalem'},{lat:32.0853,lng:34.7818,label:'Tel Aviv'}],
+   cas:'>99% intercepted; 1 child injured',src:'IDF, Reuters, Al Jazeera, BBC',
+   q:'Operation True Promise Iran missile attack Israel April 13 2024',
+   aa:0.55,as:1200,ac:['#cc0000','#ff4444'],sim:false},
+
+  {id:5,date:'2024-04-14',ts:+new Date('2024-04-14T02:00:00Z'),
+   title:'Houthi Coordinated Salvo',sub:'Yemen fires at Israel during Operation True Promise',
+   desc:'Coordinating with True Promise, Houthi forces launched ballistic missiles toward southern Israel. All intercepted by Arrow-3 and US Navy SM-3 interceptors.',
+   type:'missile',imp:'major',country:'Houthi',
+   origin:{lat:15.3694,lng:44.191,label:"Sana'a, Yemen"},
+   targets:[{lat:31.2077,lng:35.0127,label:'Nevatim'},{lat:31.0748,lng:35.1536,label:'Dimona'}],
+   cas:'None — all intercepted',src:'Al Jazeera, Times of Israel',
+   q:'Houthi missiles Israel April 14 2024 coordinated attack',
+   aa:0.62,as:1400,ac:['#cc8800','#ffaa00'],sim:false},
+
+  {id:6,date:'2024-04-19',ts:+new Date('2024-04-19T01:30:00Z'),
+   title:'Israeli Strike — Isfahan',sub:'Israel hits S-300 radar near Iranian nuclear site',
+   desc:'Israel struck an S-300 air-defense radar near Isfahan using small drones — close to a major nuclear facility. Iran downplayed it. A calculated limited retaliation deliberately below the escalation threshold.',
+   type:'drone',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:32.6546,lng:51.668,label:'Isfahan, Iran'}],
+   cas:'None reported',src:'Reuters, NYT, Jerusalem Post',
+   q:'Israel drone strike Isfahan Iran April 19 2024',
+   aa:0.38,as:2500,ac:['#0055ff','#44aaff'],sim:false},
+
+  {id:7,date:'2024-07-27',ts:+new Date('2024-07-27T17:45:00Z'),
+   title:'Majdal Shams Massacre',sub:'Hezbollah rocket kills 12 children on football pitch',
+   desc:'A Hezbollah Falaq-1 rocket struck a football pitch in Majdal Shams (Golan Heights), killing 12 children aged 10-20. The deadliest attack on Israeli civilians since Oct 7. Dramatically escalated the northern front.',
+   type:'missile',imp:'critical',country:'Hezbollah',
+   origin:{lat:33.27,lng:35.2,label:'South Lebanon'},
+   targets:[{lat:33.148,lng:35.7716,label:'Majdal Shams, Golan'}],
+   cas:'12 children killed, 44 wounded',src:'Reuters, BBC, Times of Israel',
+   q:'Majdal Shams Hezbollah rocket attack children killed July 2024',
+   aa:0.08,as:3000,ac:['#ff6600','#ff2200'],sim:false},
+
+  {id:8,date:'2024-01-12',ts:+new Date('2024-01-12T02:00:00Z'),
+   title:'Operation Prosperity Guardian',sub:'US & UK launch strikes on 60+ Houthi targets',
+   desc:'US-led coalition (US, UK, AU, CA, NL) struck 60+ Houthi targets across 16 sites: radar, drone storage, launch sites, weapons depots. B-1Bs, F/A-18s from USS Eisenhower, and Tomahawk cruise missiles used.',
+   type:'airstrike',imp:'major',country:'USA',
+   origin:{lat:15.0,lng:43.0,label:'USS Eisenhower (Red Sea)'},
+   targets:[{lat:15.3694,lng:44.191,label:"Sana'a"},{lat:14.7979,lng:42.9547,label:'Hodeidah'}],
+   cas:'Unknown militia casualties',src:'Pentagon, Reuters, BBC',
+   q:'US UK strikes Yemen Houthi January 12 2024 Operation Prosperity Guardian',
+   aa:0.32,as:1800,ac:['#ffffff','#aaccff'],sim:false},
+
+  {id:9,date:'2024-09-17',ts:+new Date('2024-09-17T15:30:00Z'),
+   title:'Pager Operation',sub:'Israel detonates thousands of Hezbollah pagers simultaneously',
+   desc:'Thousands of Hezbollah members\' pagers exploded across Lebanon in a Mossad supply-chain operation. 12 killed, ~3,000 wounded. Completely decapitated Hezbollah\'s secure communications network.',
+   type:'ground',imp:'critical',country:'Israel',
+   origin:{lat:32.0,lng:34.8,label:'Israel (Mossad HQ)'},
+   targets:[{lat:33.8938,lng:35.5018,label:'Beirut, Lebanon'},{lat:33.27,lng:35.2,label:'South Lebanon'}],
+   cas:'12 killed, ~3,000 injured',src:'Reuters, NYT, BBC',
+   q:'Lebanon pager explosion Hezbollah September 17 2024',
+   aa:0.18,as:2000,ac:['#0066ff','#00ccff'],sim:false},
+
+  {id:10,date:'2024-09-27',ts:+new Date('2024-09-27T18:00:00Z'),
+   title:'Nasrallah Eliminated',sub:'Israel kills Hezbollah chief in Beirut bunker',
+   desc:'Israeli F-35I jets struck Hezbollah HQ in Dahieh suburb of Beirut using bunker-buster bombs, killing Secretary-General Hassan Nasrallah after 32 years in power. Iran declared 3 days of mourning.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:32.6651,lng:35.1795,label:'Ramat David Air Base'},
+   targets:[{lat:33.849,lng:35.49,label:'Dahieh, Beirut'}],
+   cas:'Nasrallah + senior HQ staff',src:'IDF, Reuters, Al Jazeera',
+   q:'Israel kills Hassan Nasrallah Hezbollah Beirut September 2024',
+   aa:0.22,as:1600,ac:['#0055ff','#44aaff'],sim:false},
+
+  {id:11,date:'2024-10-01',ts:+new Date('2024-10-01T00:01:00Z'),
+   title:'IDF Ground Invasion — Lebanon',sub:'Israeli forces cross border; first since 2006',
+   desc:'IDF launched ground incursion into southern Lebanon targeting Hezbollah tunnel networks and launch sites. Armored columns crossed at multiple points alongside air and naval strikes on Beirut suburbs.',
+   type:'ground',imp:'critical',country:'Israel',
+   origin:{lat:33.05,lng:35.15,label:'Northern Israel Border'},
+   targets:[{lat:33.27,lng:35.2,label:'South Lebanon'}],
+   cas:'Dozens IDF KIA, thousands Hezbollah/civilian',src:'IDF, Reuters, Al Jazeera',
+   q:'IDF ground invasion Lebanon October 2024 Hezbollah',
+   aa:0.04,as:8000,ac:['#2266ff','#4488ff'],sim:false},
+
+  {id:12,date:'2024-10-01',ts:+new Date('2024-10-01T19:00:00Z'),
+   title:'OPERATION TRUE PROMISE II',sub:'Iran fires 180 ballistic missiles — largest salvo in history',
+   desc:'Iran launched ~180 Fattah-1 hypersonic and Emad ballistic missiles at Israel — the largest single ballistic missile salvo in history against one country. Arrow-3 and US THAAD intercepted most; a few hit Nevatim runway.',
+   type:'missile',imp:'critical',country:'Iran',
+   origin:{lat:35.6892,lng:51.389,label:'Tehran, Iran'},
+   targets:[{lat:32.0853,lng:34.7818,label:'Tel Aviv'},{lat:31.2077,lng:35.0127,label:'Nevatim'},{lat:32.067,lng:34.837,label:'Mossad HQ, Glilot'}],
+   cas:'Minor — craters at Nevatim, no mass casualties',src:'IRNA, IDF, Reuters, AP',
+   q:'Operation True Promise 2 Iran missile attack Israel October 2024',
+   aa:0.58,as:1000,ac:['#cc0000','#ff6666'],sim:false},
+
+  {id:13,date:'2024-10-15',ts:+new Date('2024-10-15T00:00:00Z'),
+   title:'USS Abraham Lincoln Enters Gulf',sub:'Third US carrier strike group — Persian Gulf',
+   desc:'USS Abraham Lincoln CSG-3 entered the Persian Gulf, joining USS Eisenhower (Red Sea) and USS Gerald R. Ford (Med). Largest US naval presence in the Middle East since the 2003 Iraq War.',
+   type:'naval',imp:'major',country:'USA',
+   origin:{lat:-7.3,lng:72.4,label:'Indian Ocean (Transit)'},
+   targets:[{lat:26.0,lng:57.0,label:'Persian Gulf'}],
+   cas:'N/A',src:'US Navy, Reuters, USNI News',
+   q:'USS Abraham Lincoln Persian Gulf three carrier deployment Middle East 2024',
+   aa:0.08,as:6000,ac:['#4488ff','#aaddff'],sim:false},
+
+  {id:14,date:'2024-10-26',ts:+new Date('2024-10-26T02:00:00Z'),
+   title:'OPERATION DAYS OF REPENTANCE',sub:'Israel strikes missile production & air defenses deep inside Iran',
+   desc:'Israel\'s largest-ever strike on Iranian soil: F-35Is hit S-300 batteries in Tehran, ballistic missile production at Parchin, and military bases near Isfahan across 4 waves over 4 hours. Iran\'s southern air defenses rendered inoperable.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:35.6892,lng:51.389,label:'Tehran'},{lat:32.6546,lng:51.668,label:'Isfahan'},{lat:35.5491,lng:51.7222,label:'Parchin Military Complex'}],
+   cas:'4 Iranian soldiers KIA; major facility damage',src:'Reuters, NYT, Jerusalem Post',
+   q:'Israel strikes Iran October 26 2024 missile production air defense',
+   aa:0.52,as:1600,ac:['#0044ff','#0099ff'],sim:false},
+
+  {id:15,date:'2024-11-26',ts:+new Date('2024-11-26T00:00:00Z'),
+   title:'Lebanon Ceasefire',sub:'US-brokered 60-day ceasefire halts Lebanon war',
+   desc:'US and France-brokered ceasefire between Israel and Hezbollah. Israel retained forces in buffer zones; Hezbollah pulled north of the Litani River. Mirrored UN Resolution 1701 with stronger monitoring provisions.',
+   type:'defense',imp:'major',country:'USA',
+   origin:{lat:38.9072,lng:-77.0369,label:'Washington D.C. (Brokered)'},
+   targets:[{lat:33.8938,lng:35.5018,label:'Beirut'},{lat:31.7683,lng:35.2137,label:'Jerusalem'}],
+   cas:'N/A (ceasefire)',src:'State Dept, Reuters, BBC',
+   q:'Lebanon ceasefire November 2024 Israel Hezbollah US brokered',
+   aa:0.25,as:4000,ac:['#00ff88','#00ffcc'],sim:false},
+
+  {id:16,date:'2025-01-19',ts:+new Date('2025-01-19T00:00:00Z'),
+   title:'Gaza Ceasefire — Phase 1',sub:'Israel-Hamas deal; hostage releases begin',
+   desc:'Phased ceasefire mediated by Qatar, Egypt and the US: 42-day pause, IDF withdrawal from populated areas, 33 Israeli hostages released for ~900 Palestinian prisoners. Preceded by final IDF operations.',
+   type:'defense',imp:'critical',country:'USA',
+   origin:{lat:25.2854,lng:51.531,label:'Doha, Qatar (Mediation)'},
+   targets:[{lat:31.5017,lng:34.4674,label:'Gaza Strip'}],
+   cas:'N/A (ceasefire)',src:'Reuters, AP, Al Jazeera',
+   q:'Gaza ceasefire January 2025 hostages Hamas Israel Qatar',
+   aa:0.2,as:4000,ac:['#00ff88','#88ffcc'],sim:false},
+
+  {id:17,date:'2025-03-18',ts:+new Date('2025-03-18T06:00:00Z'),
+   title:'Gaza Ceasefire Collapses',sub:'IDF resumes full operations after deal breakdown',
+   desc:'After Hamas refused Phase 2 bridging proposals, Israel relaunched operations across Gaza. 400+ killed in first 24h. Qatar suspended mediator role. Widespread international condemnation.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:31.5017,lng:34.4674,label:'Gaza City'},{lat:31.3469,lng:34.3069,label:'Khan Younis'},{lat:31.2452,lng:34.2058,label:'Rafah'}],
+   cas:'400+ killed in first 24h (Gazan MoH)',src:'Reuters, Al Jazeera',
+   q:'Israel resumes Gaza operation March 2025 ceasefire collapse',
+   aa:0.08,as:1800,ac:['#0044ff','#3399ff'],sim:false},
+
+  {id:18,date:'2025-04-12',ts:+new Date('2025-04-12T03:00:00Z'),
+   title:'US-Iran Nuclear Talks — Oman',sub:'First direct US-Iran talks in years under Trump',
+   desc:'US envoy Steve Witkoff and Iranian FM Abbas Araghchi held first direct talks since 2022, mediated in Muscat. Focus: Iran\'s 60% enrichment and sanctions relief. Israel expressed concern about legitimizing Iran\'s program.',
+   type:'defense',imp:'major',country:'USA',
+   origin:{lat:23.588,lng:58.3829,label:'Muscat, Oman'},
+   targets:[{lat:38.9072,lng:-77.0369,label:'Washington D.C.'},{lat:35.6892,lng:51.389,label:'Tehran'}],
+   cas:'N/A (diplomacy)',src:'Reuters, WSJ, IRNA',
+   q:'US Iran nuclear talks Oman 2025 Witkoff Araghchi',
+   aa:0.3,as:5000,ac:['#00ff88','#00ccff'],sim:false},
+
+  {id:19,date:'2025-05-05',ts:+new Date('2025-05-05T14:00:00Z'),
+   title:'US Strikes Houthi Capital',sub:"B-2 bombers hit underground bunkers in Sana'a",
+   desc:"US B-2 Spirit bombers flying from Diego Garcia struck Houthi underground command bunkers using GBU-57 Massive Ordnance Penetrators. Key C2 infrastructure destroyed. Houthi leadership survived.",
+   type:'airstrike',imp:'critical',country:'USA',
+   origin:{lat:-7.3195,lng:72.4236,label:'Diego Garcia (B-2 Base)'},
+   targets:[{lat:15.3694,lng:44.191,label:"Sana'a, Yemen"}],
+   cas:'Unknown militia; civilian casualties disputed',src:'Pentagon, Reuters, Al Jazeera',
+   q:'US B-2 bomber Houthi Sanaa strike 2025 bunker buster',
+   aa:0.65,as:2000,ac:['#ffffff','#ccddff'],sim:false},
+
+  {id:20,date:'2025-08-20',ts:+new Date('2025-08-20T02:00:00Z'),
+   title:'Israeli Strike — Natanz Facility',sub:"Israel targets Iran's primary nuclear enrichment site",
+   desc:'Israel struck the Natanz uranium enrichment facility with F-35Is and armed drones. Advanced centrifuges reportedly destroyed. Iran suspended IAEA inspections and announced 90% enrichment capability.',
+   type:'airstrike',imp:'critical',country:'Israel',
+   origin:{lat:31.2077,lng:35.0127,label:'Nevatim Air Base'},
+   targets:[{lat:33.7225,lng:51.7269,label:'Natanz Nuclear Facility'}],
+   cas:'Unknown; IAEA access denied',src:'NYT, Reuters (partially confirmed)',
+   q:'Israel strikes Natanz nuclear facility Iran 2025',
+   aa:0.48,as:1600,ac:['#0033ff','#0088ff'],sim:false},
+
+  {id:21,date:'2026-01-15',ts:+new Date('2026-01-15T20:00:00Z'),
+   title:'OPERATION TRUE PROMISE III [PROJ]',sub:'Iran launches 250 missiles including Khorramshahr-4',
+   desc:'[PROJECTED] Iran\'s third major direct attack on Israel: 250 projectiles including the Khorramshahr-4 (Kheibar) MRBM. ~92% intercepted. 8 missiles struck areas near Dimona, Tel Aviv and Haifa. 23 killed.',
+   type:'missile',imp:'critical',country:'Iran',
+   origin:{lat:35.6892,lng:51.389,label:'Tehran, Iran'},
+   targets:[{lat:31.0748,lng:35.1536,label:'Dimona'},{lat:32.0853,lng:34.7818,label:'Tel Aviv'},{lat:32.794,lng:34.9896,label:'Haifa'}],
+   cas:'23 killed, 180 injured',src:'PROJECTED — based on escalation trajectory',
+   q:'Iran missile attack Israel 2026 Khorramshahr Kheibar',
+   aa:0.6,as:900,ac:['#aa0000','#ff0000'],sim:true},
+
+  {id:22,date:'2026-03-08',ts:+new Date('2026-03-08T04:00:00Z'),
+   title:'US & Israel Joint Strike — IRGC HQ [PROJ]',sub:'B-2 + F-35I hit IRGC headquarters, Tehran',
+   desc:'[PROJECTED] Joint US-Israel strike on IRGC General Staff HQ in Lavizan district, Tehran. B-2 bombers from Diego Garcia + Israeli F-35Is. Accompanied by US cyber operations disabling Iranian air defense networks.',
+   type:'airstrike',imp:'critical',country:'USA',
+   origin:{lat:-7.3195,lng:72.4236,label:'Diego Garcia'},
+   targets:[{lat:35.7597,lng:51.5,label:'IRGC HQ, Lavizan, Tehran'}],
+   cas:'IRGC commander KIA (unconfirmed)',src:'PROJECTED — based on escalation trajectory',
+   q:'US Israel joint strike IRGC Tehran 2026',
+   aa:0.7,as:1800,ac:['#8888ff','#ffffff'],sim:true},
+
+  {id:23,date:'2026-04-10',ts:+new Date('2026-04-10T00:00:00Z'),
+   title:'USS Carl Vinson — Strait of Hormuz [PROJ]',sub:'Fourth US carrier enters Persian Gulf',
+   desc:'[PROJECTED] USS Carl Vinson CSG-1 transited the Strait of Hormuz into the Persian Gulf joining USS Abraham Lincoln. Iran scrambled F-14s to shadow the carrier. Unprecedented two-carrier Persian Gulf presence.',
+   type:'naval',imp:'critical',country:'USA',
+   origin:{lat:5.0,lng:68.0,label:'Indian Ocean (Transit)'},
+   targets:[{lat:26.0,lng:54.0,label:'Persian Gulf'}],
+   cas:'N/A',src:'PROJECTED — based on US naval deployments',
+   q:'USS Carl Vinson Persian Gulf 2026 Iran',
+   aa:0.06,as:7000,ac:['#4499ff','#aaccff'],sim:true}
+];
+
+var TL_START = +new Date('2024-01-01');
+var TL_END   = +new Date('2026-04-18');
+
+/* ─── STATE ─────────────────────────────────────────────── */
+var mode        = 'live';
+var selEv       = null;
+var curTime     = TL_START;
+var isPlaying   = true;
+var spd         = 5;
+var liveInt     = null;
+var rafId       = null;
+var lastRts     = null;
+var activeEvs   = [];
+var globe;
+
+/* ─── GLOBE INIT ────────────────────────────────────────── */
+window.addEventListener('load', function() {
+  var el = document.getElementById('wm-globe');
+  globe = Globe()(el);
+  globe
+    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+    .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+    .atmosphereColor('#00cc44')
+    .atmosphereAltitude(0.18)
+    .width(el.offsetWidth)
+    .height(el.offsetHeight);
+
+  setTimeout(function() {
+    globe.pointOfView({lat:31, lng:44, altitude:1.8}, 1500);
+  }, 400);
+
+  buildLegend();
+  buildTicker();
+  updateClock();
+  setInterval(updateClock, 1000);
+  startLive();
+
+  window.addEventListener('resize', function() {
+    globe.width(el.offsetWidth).height(el.offsetHeight);
+  });
+});
+
+/* ─── GLOBE UPDATE ──────────────────────────────────────── */
+function updateGlobe() {
+  var arcs = [];
+  activeEvs.forEach(function(ev) {
+    (ev.targets||[]).forEach(function(t) {
+      arcs.push({sLat:ev.origin.lat, sLng:ev.origin.lng, eLat:t.lat, eLng:t.lng,
+        col:ev.ac||['#00ff41','#00ff41'], alt:ev.aa||0.3, spd:ev.as||1800, ev:ev});
+    });
+  });
+
+  var activeIds = {};
+  activeEvs.forEach(function(e){ activeIds[e.id]=true; });
+
+  var pts = [];
+  EVENTS.forEach(function(ev) {
+    var isAct = activeIds[ev.id];
+    var isSel = selEv && selEv.id===ev.id;
+    var col   = IMP[ev.imp]||'#00ff41';
+    pts.push({lat:ev.origin.lat, lng:ev.origin.lng, label:ev.origin.label,
+      sz: isSel?0.6:isAct?0.45:0.2, col:isAct?col:col+'44', alt:0.005, ev:ev});
+    if (isAct) {
+      (ev.targets||[]).forEach(function(t) {
+        pts.push({lat:t.lat, lng:t.lng, label:t.label, sz:0.35, col:'#ff2222', alt:0.005, ev:ev});
+      });
+    }
+  });
+
+  var lbls = activeEvs.map(function(ev) {
+    return {lat:ev.origin.lat, lng:ev.origin.lng, text:ev.origin.label, col:TYPE_META[ev.type]&&TYPE_META[ev.type].color||'#00ff41'};
+  });
+
+  globe
+    .arcsData(arcs)
+    .arcStartLat('sLat').arcStartLng('sLng').arcEndLat('eLat').arcEndLng('eLng')
+    .arcColor('col').arcAltitude('alt').arcStroke(0.5)
+    .arcDashLength(0.35).arcDashGap(0.15).arcDashAnimateTime('spd')
+    .onArcClick(function(d){ if(d&&d.ev) showCard(d.ev); })
+    .pointsData(pts).pointLat('lat').pointLng('lng')
+    .pointColor('col').pointRadius('sz').pointAltitude('alt')
+    .onPointClick(function(d){ if(d&&d.ev) showCard(d.ev); })
+    .htmlElementsData(lbls).htmlLat('lat').htmlLng('lng').htmlAltitude(0.015)
+    .htmlElement(function(d){
+      var el=document.createElement('div');
+      el.className='ev-label';
+      el.textContent=d.text;
+      el.style.color=d.col;
+      el.style.borderColor=d.col+'88';
+      el.style.textShadow='0 0 6px '+d.col;
+      return el;
+    });
+
+  var n = activeEvs.length;
+  document.getElementById('arc-count').textContent = n+' arc'+(n!==1?'s':'')+' tracked';
+  document.getElementById('ops-count').textContent = n;
+}
+
+/* ─── LIVE MODE ─────────────────────────────────────────── */
+function startLive() {
+  stopAll();
+  activeEvs = pickRandom(3);
+  updateGlobe();
+  liveInt = setInterval(function(){
+    var prevIds = {};
+    activeEvs.forEach(function(e){ prevIds[e.id]=true; });
+    var pool = EVENTS.filter(function(e){ return !prevIds[e.id]; });
+    var next = pool.length ? pool[Math.floor(Math.random()*pool.length)] : EVENTS[Math.floor(Math.random()*EVENTS.length)];
+    activeEvs = activeEvs.slice(-2).concat([next]);
+    updateGlobe();
+  }, 3500);
+}
+
+function pickRandom(n) {
+  return EVENTS.slice().sort(function(){ return Math.random()-0.5; }).slice(0,n);
+}
+
+/* ─── TIMELINE MODE ─────────────────────────────────────── */
+var MS_PER_REAL = 86400;
+var WIN = 12*3600*1000;
+
+function startTimeline() {
+  stopAll();
+  buildDots();
+  syncTimelineUI();
+  if (isPlaying) runTimeline();
+}
+
+function runTimeline() {
+  lastRts = null;
+  rafId = requestAnimationFrame(function tick(ts) {
+    if (lastRts!==null) {
+      var delta = ts-lastRts;
+      curTime = Math.min(curTime+delta*MS_PER_REAL*spd, TL_END);
+      if (curTime>=TL_END) curTime=TL_START;
+    }
+    lastRts=ts;
+    activeEvs = EVENTS.filter(function(e){ return e.ts<=curTime && e.ts>=curTime-WIN; });
+    updateGlobe();
+    syncTimelineUI();
+    if (isPlaying) rafId=requestAnimationFrame(tick);
+  });
+}
+
+function syncTimelineUI() {
+  var pct = (curTime-TL_START)/(TL_END-TL_START);
+  document.getElementById('tl-range').value = Math.round(pct*1000);
+  var d = new Date(curTime);
+  var MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('tl-date').textContent =
+    String(d.getUTCDate()).padStart(2,'0')+' '+MN[d.getUTCMonth()]+' '+d.getUTCFullYear();
+  document.querySelectorAll('.tl-dot').forEach(function(dot){
+    var ets=parseInt(dot.dataset.ts);
+    var act=ets<=curTime&&ets>=curTime-WIN;
+    dot.style.opacity=act?'1':'0.3';
+    dot.style.transform=act?'translateX(-50%) scale(1.5)':'translateX(-50%)';
+  });
+}
+
+function buildDots() {
+  var cont = document.getElementById('wm-tl-dots');
+  cont.innerHTML='';
+  var total=TL_END-TL_START;
+  EVENTS.forEach(function(ev){
+    var pct=((ev.ts-TL_START)/total)*100;
+    var btn=document.createElement('button');
+    btn.className='tl-dot btn';
+    btn.dataset.ts=ev.ts;
+    btn.title=ev.title;
+    btn.style.cssText='position:absolute;left:'+pct+'%;bottom:0;transform:translateX(-50%);padding:0;opacity:0.3;transition:all 0.3s;cursor:pointer;background:none;border:none';
+    var color=IMP[ev.imp]||'#00ff41';
+    var sz=ev.imp==='critical'?8:5;
+    btn.innerHTML='<span style="display:block;width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+color+';box-shadow:0 0 4px '+color+'"></span>';
+    btn.addEventListener('click',function(){ curTime=ev.ts; showCard(ev); syncTimelineUI(); });
+    cont.appendChild(btn);
+  });
+}
+
+/* ─── MODE SWITCH ───────────────────────────────────────── */
+function setMode(m) {
+  mode=m;
+  selEv=null;
+  document.getElementById('wm-card').style.display='none';
+  var bl=document.getElementById('btn-live'), bt=document.getElementById('btn-tl');
+  var tp=document.getElementById('wm-tl'),    li=document.getElementById('wm-live-info');
+  if (m==='live') {
+    bl.className='mbtn al'; bt.className='mbtn';
+    tp.style.display='none'; li.style.display='block';
+    startLive();
+  } else {
+    bl.className='mbtn'; bt.className='mbtn at';
+    tp.style.display='block'; li.style.display='none';
+    startTimeline();
+  }
+}
+
+function stopAll() {
+  if (liveInt){ clearInterval(liveInt); liveInt=null; }
+  if (rafId){ cancelAnimationFrame(rafId); rafId=null; }
+}
+
+function togglePlay() {
+  isPlaying=!isPlaying;
+  document.getElementById('tl-playbtn').innerHTML=isPlaying?'&#9646;&#9646;':'&#9654;';
+  if (isPlaying){ lastRts=null; runTimeline(); }
+  else if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+}
+
+function onScrub(val) {
+  curTime=TL_START+(val/1000)*(TL_END-TL_START);
+  activeEvs=EVENTS.filter(function(e){ return e.ts<=curTime&&e.ts>=curTime-WIN; });
+  updateGlobe(); syncTimelineUI();
+}
+
+function setSpeed(s) {
+  spd=s;
+  document.querySelectorAll('.speed-btn').forEach(function(b){
+    b.classList.toggle('act', parseInt(b.textContent)===s);
+  });
+}
+
+/* ─── EVENT CARD ────────────────────────────────────────── */
+function showCard(ev) {
+  selEv=ev;
+  var card=document.getElementById('wm-card');
+  var m=TYPE_META[ev.type]||{};
+  var c=m.color||'#00ff41';
+  var ic=IMP[ev.imp]||'#00ff41';
+  var cc=CC[ev.country]||'#888';
+  var tags=(ev.tags||[]).map(function(t){ return '<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(0,40,0,0.8);color:#336633;border:1px solid #1a3d1a;display:inline-block;margin:1px">'+t+'</span>'; }).join('');
+  var tgts=(ev.targets||[]).map(function(t){ return '<div style="font-size:11px;color:#66cc88;margin-left:6px">&#8627; '+t.label+'</div>'; }).join('');
+  card.style.cssText='position:absolute;right:16px;top:110px;width:300px;z-index:30;display:flex;flex-direction:column;border-radius:6px;overflow:hidden;max-height:calc(100% - 210px);background:rgba(0,8,0,0.95);border:1px solid '+c+'44;box-shadow:0 0 20px '+c+'11;animation:fadeIn 0.3s ease';
+  card.innerHTML='<div style="padding:10px 12px;border-bottom:1px solid '+c+'22;display:flex;gap:8px;align-items:flex-start">'
+    +'<div style="flex:1;min-width:0">'
+    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">'
+    +(ev.imp==='critical'?'<span style="font-size:9px;font-weight:bold;padding:2px 6px;border-radius:3px;background:'+ic+'22;color:'+ic+';border:1px solid '+ic+'44">&#9685; CRITICAL</span>':'')
+    +(ev.sim?'<span style="font-size:9px;font-weight:bold;padding:2px 6px;border-radius:3px;background:rgba(80,60,0,0.5);color:#cc9900;border:1px solid #665500">PROJECTED</span>':'')
+    +'</div>'
+    +'<div style="font-size:11px;font-weight:bold;color:'+c+';text-shadow:0 0 6px '+c+';line-height:1.3">'+ev.title+'</div>'
+    +'<div style="font-size:11px;color:#66cc88;margin-top:2px;line-height:1.3">'+ev.sub+'</div>'
+    +'</div>'
+    +'<button onclick="closeCard()" style="cursor:pointer;background:none;border:none;color:#336633;font-size:20px;line-height:1;flex-shrink:0">&#215;</button>'
+    +'</div>'
+    +'<div style="flex:1;overflow-y:auto;padding:12px">'
+    +'<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap">'
+    +'<div><div style="font-size:9px;color:#336633;letter-spacing:2px">DATE</div><div style="font-size:11px;font-weight:bold;color:#00ff41">'+ev.date+'</div></div>'
+    +'<div><div style="font-size:9px;color:#336633;letter-spacing:2px">ACTOR</div><div style="font-size:11px;font-weight:bold;color:'+cc+'">'+ev.country+'</div></div>'
+    +'<div><div style="font-size:9px;color:#336633;letter-spacing:2px">TYPE</div><div style="font-size:11px;font-weight:bold;color:#00ff41">'+ev.type.toUpperCase()+'</div></div>'
+    +'</div>'
+    +'<div style="font-size:11px;color:#99ccaa;line-height:1.6;margin-bottom:10px">'+ev.desc+'</div>'
+    +'<div style="margin-bottom:8px">'
+    +'<div style="font-size:9px;color:#336633;letter-spacing:2px">ORIGIN</div>'
+    +'<div style="font-size:11px;color:#66cc88;margin-left:6px">'+(ev.origin&&ev.origin.label||'')+'</div>'
+    +'<div style="font-size:9px;color:#336633;letter-spacing:2px;margin-top:4px">TARGETS</div>'
+    +tgts+'</div>'
+    +(ev.cas?'<div style="margin-bottom:8px"><div style="font-size:9px;color:#336633;letter-spacing:2px">CASUALTIES</div><div style="font-size:11px;margin-left:6px;color:'+(ev.cas.indexOf('killed')>-1||ev.cas.indexOf('KIA')>-1?'#ff9999':'#00ff88')+'">'+ev.cas+'</div></div>':'')
+    +'<div style="margin-bottom:8px">'+tags+'</div>'
+    +'<div style="font-size:10px;color:#336633">SOURCE: <span style="color:#557755">'+ev.src+'</span></div>'
+    +'</div>'
+    +'<div style="padding:10px 12px;border-top:1px solid '+c+'22">'
+    +'<button onclick="openVideo()" style="width:100%;padding:8px;border-radius:4px;cursor:pointer;font-family:\'Courier New\',monospace;font-size:11px;font-weight:bold;letter-spacing:2px;background:'+c+'22;border:1px solid '+c+'55;color:'+c+';text-shadow:0 0 6px '+c+'">&#9654; WATCH VIDEO FOOTAGE</button>'
+    +'</div>';
+  updateGlobe();
+}
+
+function closeCard() {
+  selEv=null;
+  document.getElementById('wm-card').style.display='none';
+  updateGlobe();
+}
+
+/* ─── VIDEO MODAL ───────────────────────────────────────── */
+function openVideo() {
+  if (!selEv) return;
+  var ev=selEv, m=TYPE_META[ev.type]||{}, c=m.color||'#00ff41';
+  var q=encodeURIComponent(ev.q||ev.title);
+  var src='https://www.youtube.com/embed?listType=search&list='+q+'&autoplay=1';
+  var yt='https://www.youtube.com/results?search_query='+q;
+  var inner=document.getElementById('wm-modal-inner');
+  inner.style.cssText='border:1px solid '+c+'55;box-shadow:0 0 40px '+c+'22;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;width:min(860px,96%);max-height:90%;background:rgba(0,8,0,0.97)';
+  inner.innerHTML='<div style="padding:12px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid '+c+'22;flex-shrink:0">'
+    +'<div><div style="font-size:9px;color:#336633;letter-spacing:3px">VIDEO INTELLIGENCE</div>'
+    +'<div style="font-size:13px;font-weight:bold;color:'+c+';text-shadow:0 0 8px '+c+'">'+ev.title+'</div>'
+    +'<div style="font-size:11px;color:#66cc88">'+ev.sub+'</div></div>'
+    +'<div style="display:flex;align-items:center;gap:12px;flex-shrink:0">'
+    +'<a href="'+yt+'" target="_blank" style="font-size:10px;color:#336633;text-decoration:underline">Open in YouTube &#8599;</a>'
+    +'<button onclick="closeVideo()" style="cursor:pointer;background:none;border:none;color:#336633;font-size:24px;line-height:1">&#215;</button>'
+    +'</div></div>'
+    +'<div style="position:relative;width:100%;padding-bottom:56.25%;flex-shrink:0;min-height:280px">'
+    +'<iframe src="'+src+'" title="'+ev.title.replace(/"/g,'&quot;')+'" allowfullscreen allow="autoplay;encrypted-media" style="position:absolute;inset:0;width:100%;height:100%;border:none;background:#000"></iframe>'
+    +'</div>'
+    +'<div style="padding:8px 16px;display:flex;justify-content:space-between;font-size:10px;color:#336633;border-top:1px solid '+c+'11;flex-shrink:0">'
+    +'<span>SOURCE: '+ev.src+'</span><span>'+ev.date+' &middot; '+ev.country+'</span>'
+    +(ev.sim?'<span style="color:#cc9900;font-weight:bold">&#9888; PROJECTED SCENARIO</span>':'')
+    +'</div>';
+  document.getElementById('wm-modal').style.display='flex';
+}
+
+function closeVideo() {
+  document.getElementById('wm-modal').style.display='none';
+  document.getElementById('wm-modal-inner').innerHTML='';
+}
+
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeVideo(); });
+
+/* ─── LEGEND ────────────────────────────────────────────── */
+function buildLegend() {
+  var el=document.getElementById('wm-ltypes');
+  Object.keys(TYPE_META).forEach(function(t) {
+    var m=TYPE_META[t];
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:4px';
+    row.innerHTML='<svg width="28" height="10" viewBox="0 0 28 10"><path d="M 2 8 Q 14 0 26 8" stroke="'+m.color+'" stroke-width="2" fill="none" stroke-dasharray="4 2"/></svg>'
+      +'<span style="font-size:10px;color:#66cc88">'+m.label+'</span>';
+    el.appendChild(row);
+  });
+}
+
+/* ─── NEWS TICKER ───────────────────────────────────────── */
+function buildTicker() {
+  var headlines=[
+    '[Reuters] Israel signals readiness for further strikes if nuclear talks fail',
+    '[AP] Iran enriches uranium to 84% purity — IAEA gravely concerned',
+    '[Defense News] US deploys additional THAAD battery to Israel',
+    "[Lloyd's List] Houthi attack damages Singapore-flagged tanker in Red Sea",
+    '[Times of Israel] Netanyahu: military option against Iran remains on table',
+    '[WSJ] US-Iran Oman talks stall over enrichment caps — White House',
+    '[IDF] 300+ rockets fired from Gaza since ceasefire collapsed',
+    '[NYT] Russia reportedly shares satellite intel with Iran — US officials',
+    '[Bloomberg] Saudi Arabia warns regional war could spike oil to $200/barrel',
+    '[Tasnim] IRGC test-fires Fatah-2 hypersonic in Persian Gulf exercise',
+    '[BBC] UK joins US in Red Sea escort operations amid record Houthi attacks',
+    '[Haaretz] Israel air force conducts largest-ever exercise simulating Iran strikes',
+    '[Reuters] Hezbollah fires 80 rockets toward Galilee — IDF intercepts majority',
+    '[FT] Oil surges 4% as market prices in potential Strait of Hormuz closure',
+    '[Pentagon] USS Carl Vinson combat-ready in Persian Gulf as Iran tensions rise'
+  ];
+  var doubled=headlines.concat(headlines);
+  document.getElementById('wm-ttrack').textContent=doubled.map(function(h){ return h+'     \u25c6     '; }).join('');
+}
+
+/* ─── CLOCK ─────────────────────────────────────────────── */
+function updateClock() {
+  var now=new Date();
+  var MN=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  document.getElementById('wm-date').textContent=String(now.getUTCDate()).padStart(2,'0')+' '+MN[now.getUTCMonth()]+' '+now.getUTCFullYear();
+  document.getElementById('wm-clock').textContent=String(now.getUTCHours()).padStart(2,'0')+':'+String(now.getUTCMinutes()).padStart(2,'0')+':'+String(now.getUTCSeconds()).padStart(2,'0')+' UTC';
+}
+</script>
+</body>
+</html>
