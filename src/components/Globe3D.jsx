@@ -6,16 +6,18 @@ const INIT_LAT = 31
 const INIT_LNG  = 44
 const INIT_ALT  = 1.3
 
-// ── Dynamic arc altitude ──────────────────────────────────────────────────────
-// Instead of per-event static altitudes, compute a realistic trajectory height
-// based on the angular distance between origin and target.
+// Types whose arcs hug the surface and move slowly (logistical routes, not strikes)
+const DEPLOYMENT_TYPES = new Set(['deployment', 'airlift'])
+
+// ── Dynamic arc altitude ───────────────────────────────────────────────────────
+// Compute a realistic atmospheric trajectory height from angular distance.
+// Deployment types override this with their own near-surface values.
 //
-// Uses sqrt scaling so:
-//   - Very short flights  (~1-2°)  → 0.04-0.07  (barely above surface)
-//   - Regional strikes   (~5-15°) → 0.10-0.19  (atmospheric)
-//   - Intercontinental  (~40-50°) → capped 0.28 (high atmosphere, never orbital)
-//
-// The cos(lat) correction removes longitude distortion at high latitudes.
+// sqrt-scale keeps short-range strikes low and intercontinentals sub-orbital:
+//   ~2°  (Lebanon→Israel)    → 0.04-0.07
+//   ~14° (Iran→Israel)       → 0.19
+//   ~18° (Yemen→Israel)      → 0.21
+//   ~46° (Diego Garcia→Iran) → 0.28 (capped)
 function computeArcAlt(origin, target) {
   if (!origin || !target) return 0.08
   const midLat = ((origin.lat + target.lat) / 2) * (Math.PI / 180)
@@ -23,6 +25,35 @@ function computeArcAlt(origin, target) {
   const dLng   = (target.lng - origin.lng) * Math.cos(midLat)
   const dist   = Math.sqrt(dLat * dLat + dLng * dLng)
   return Math.min(0.28, Math.max(0.04, Math.sqrt(dist) * 0.05))
+}
+
+// ── Per-arc style params ───────────────────────────────────────────────────────
+// Stored directly in the arc data object so <Globe> can use plain string accessors
+// (e.g. arcDashLength="dl"), keeping useMemo deps stable with no inline functions.
+function arcStyle(ev, target) {
+  const isDeployment = DEPLOYMENT_TYPES.has(ev.type)
+
+  if (isDeployment) {
+    const isAirlift = ev.type === 'airlift'
+    return {
+      // Flat surface route for naval; very low for airlift
+      altitude: isAirlift ? (ev.arcAltitude ?? 0.05) : (ev.arcAltitude ?? 0.002),
+      // Multiple dashes visible simultaneously = convoy/route feel
+      dl:       0.10,
+      dg:       0.06,
+      // Very slow — 10–18s to traverse the full arc
+      animTime: ev.arcSpeed ?? (isAirlift ? 9000 : 16000),
+      stroke:   1.8,
+    }
+  }
+
+  return {
+    altitude: computeArcAlt(ev.origin, target),
+    dl:       0.03,   // tiny dot racing along the path
+    dg:       0.97,
+    animTime: ev.arcSpeed ?? 1800,
+    stroke:   2.0,
+  }
 }
 
 export default function Globe3D({ events, activeEvents, selectedEvent, onEventClick }) {
@@ -45,30 +76,38 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
     return () => clearTimeout(timer)
   }, [])
 
-  // ── Stable key derived from active event IDs ───────────────────────────────
-  // activeEvents gets a new array reference every RAF frame in timeline mode,
-  // but the actual set of visible events changes infrequently (every 12 game-hours).
-  // useMemo on this key avoids re-running expensive flatMaps on every frame.
+  // ── Stable memoization key ─────────────────────────────────────────────────
+  // activeEvents gets a new array reference every RAF tick in timeline mode, but
+  // the actual set of visible event IDs changes far less frequently.
+  // Keying on the sorted ID string prevents Globe's three useMemo calls from
+  // re-running on every single animation frame.
   const activeEventKey = activeEvents.map((e) => e.id).sort().join(',')
+  const selectedId     = selectedEvent?.id ?? null
 
+  // ── Arc data — combat strikes & deployments unified with per-arc style ─────
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const arcsData = useMemo(() =>
     activeEvents.flatMap((ev) =>
-      (ev.targets ?? []).map((target) => ({
-        startLat: ev.origin.lat,
-        startLng: ev.origin.lng,
-        endLat:   target.lat,
-        endLng:   target.lng,
-        color:    ev.arcColor ?? [getTypeColor(ev.type), getTypeColor(ev.type)],
-        altitude: computeArcAlt(ev.origin, target),  // dynamic — never orbital
-        animTime: ev.arcSpeed ?? 1800,
-        event:    ev,
-      }))
+      (ev.targets ?? []).map((target) => {
+        const style = arcStyle(ev, target)
+        return {
+          startLat: ev.origin.lat,
+          startLng: ev.origin.lng,
+          endLat:   target.lat,
+          endLng:   target.lng,
+          color:    ev.arcColor ?? [getTypeColor(ev.type), getTypeColor(ev.type)],
+          altitude: style.altitude,
+          dl:       style.dl,
+          dg:       style.dg,
+          animTime: style.animTime,
+          stroke:   style.stroke,
+          event:    ev,
+        }
+      })
     ),
   [activeEventKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectedId = selectedEvent?.id ?? null
-
+  // ── Point markers ─────────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const pointsData = useMemo(() => {
     const activeIds = new Set(activeEvents.map((e) => e.id))
@@ -93,7 +132,7 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
           lng:      t.lng,
           label:    t.label,
           size:     0.4,
-          color:    '#ff2222',
+          color:    DEPLOYMENT_TYPES.has(ev.type) ? getTypeColor(ev.type) : '#ff2222',
           altitude: 0.005,
           event:    ev,
         }))
@@ -103,6 +142,7 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
     })
   }, [activeEventKey, selectedId, events]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── HTML labels ───────────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const htmlData = useMemo(() =>
     activeEvents.map((ev) => ({
@@ -113,7 +153,7 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
     })),
   [activeEventKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Interaction handlers ───────────────────────────────────────────────────
+  // ── Interaction handlers (stable refs) ────────────────────────────────────
   const handlePointClick = useCallback((pt) => {
     if (!pt?.event) return
     onEventClick(pt.event)
@@ -128,8 +168,8 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
 
   const htmlElement = useCallback((d) => {
     const el = document.createElement('div')
-    el.className = 'event-label'
-    el.textContent = d.text
+    el.className     = 'event-label'
+    el.textContent   = d.text
     el.style.color       = d.color
     el.style.borderColor = `${d.color}88`
     el.style.textShadow  = `0 0 6px ${d.color}`
@@ -148,6 +188,7 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
         atmosphereColor="#00cc44"
         atmosphereAltitude={0.18}
 
+        // ── Arcs — per-arc style via string accessors (no inline functions) ──
         arcsData={arcsData}
         arcStartLat="startLat"
         arcStartLng="startLng"
@@ -156,14 +197,15 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
         arcColor="color"
         arcAltitudeAutoScale={false}
         arcAltitude="altitude"
-        arcStroke={0.5}
-        arcDashLength={0.35}
-        arcDashGap={0.15}
+        arcStroke="stroke"
+        arcDashLength="dl"
+        arcDashGap="dg"
         arcDashAnimateTime="animTime"
         arcLabel={(d) => d.event?.title}
         onArcClick={handleArcClick}
         onArcHover={(arc) => { document.body.style.cursor = arc ? 'pointer' : 'auto' }}
 
+        // ── Points ────────────────────────────────────────────────────────────
         pointsData={pointsData}
         pointLat="lat"
         pointLng="lng"
@@ -175,6 +217,7 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
         onPointClick={handlePointClick}
         onPointHover={(pt) => { document.body.style.cursor = pt ? 'pointer' : 'auto' }}
 
+        // ── HTML labels ───────────────────────────────────────────────────────
         htmlElementsData={htmlData}
         htmlLat="lat"
         htmlLng="lng"
