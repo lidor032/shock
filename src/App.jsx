@@ -1,37 +1,60 @@
-import { useState, useCallback } from 'react'
-import Globe3D from './components/Globe3D'
-import Timeline from './components/Timeline'
-import EventCard from './components/EventCard'
-import VideoModal from './components/VideoModal'
-import NewsFeed from './components/NewsFeed'
-import Legend from './components/Legend'
-import Header from './components/Header'
-import { events, TIMELINE_START } from './data/events'
+import { useState, useCallback, useMemo } from 'react'
+import Globe3D     from './components/Globe3D'
+import Timeline    from './components/Timeline'
+import EventCard   from './components/EventCard'
+import VideoModal  from './components/VideoModal'
+import NewsFeed    from './components/NewsFeed'
+import Legend      from './components/Legend'
+import Header      from './components/Header'
+import { events, campaigns } from './data/events'
 import { useSimulation } from './hooks/useSimulation'
-import { useNews } from './hooks/useNews'
+import { useNews }        from './hooks/useNews'
 
 export default function App() {
-  const [mode, setMode]               = useState('live')           // 'live' | 'timeline'
-  const [selectedEvent, setSelected]  = useState(null)
-  const [showVideo, setShowVideo]     = useState(false)
-  const [currentTime, setCurrentTime] = useState(TIMELINE_START)
-  const [isPlaying, setIsPlaying]     = useState(true)
-  const [speed, setSpeed]             = useState(5)
+  const [mode, setMode]              = useState('live')
+  const [selectedEvent, setSelected] = useState(null)
+  const [showVideo, setShowVideo]    = useState(false)
+  const [isPlaying, setIsPlaying]    = useState(true)
+  const [speed, setSpeed]            = useState(5)
 
+  // ── Campaign selector ──────────────────────────────────────────────────────
+  const [activeCampaignId, setActiveCampaignId] = useState('all')
+
+  const currentCampaign = useMemo(
+    () => campaigns.find((c) => c.id === activeCampaignId) ?? campaigns[0],
+    [activeCampaignId]
+  )
+
+  const [currentTime, setCurrentTime] = useState(currentCampaign.start)
+
+  const handleCampaignChange = (e) => {
+    const campaign = campaigns.find((c) => c.id === e.target.value) ?? campaigns[0]
+    setActiveCampaignId(campaign.id)
+    setCurrentTime(campaign.start)
+    setSelected(null)
+  }
+
+  // ── Simulation ─────────────────────────────────────────────────────────────
   const { activeEvents } = useSimulation({
-    mode, currentTime, isPlaying, speed, events, setCurrentTime,
+    mode,
+    currentTime,
+    isPlaying,
+    speed,
+    events,
+    setCurrentTime,
+    startTime: currentCampaign.start,
+    endTime:   currentCampaign.end,
   })
 
   const { headlines } = useNews()
 
+  // ── Event handlers ─────────────────────────────────────────────────────────
   const handleEventClick = useCallback((event) => {
     setSelected(event)
     setShowVideo(false)
   }, [])
 
-  const handleWatchVideo = useCallback(() => {
-    setShowVideo(true)
-  }, [])
+  const handleWatchVideo = useCallback(() => setShowVideo(true), [])
 
   const handleCloseCard = useCallback(() => {
     setSelected(null)
@@ -40,7 +63,7 @@ export default function App() {
 
   return (
     <div className="relative w-screen h-screen bg-black overflow-hidden">
-      {/* Full-screen Globe (behind everything) */}
+      {/* Full-screen Globe */}
       <div className="absolute inset-0 z-0">
         <Globe3D
           events={events}
@@ -50,11 +73,25 @@ export default function App() {
         />
       </div>
 
-      {/* News ticker (below header) */}
       <NewsFeed headlines={headlines} />
 
-      {/* Top header */}
       <Header mode={mode} onModeChange={(m) => { setMode(m); setSelected(null) }} />
+
+      {/* Campaign selector — visible in timeline mode */}
+      {mode === 'timeline' && (
+        <div className="absolute top-20 right-4 z-40 mil-panel border-glow p-2 rounded">
+          <label className="text-green-700 text-xs mr-2 font-mono tracking-widest">FOCUS:</label>
+          <select
+            value={activeCampaignId}
+            onChange={handleCampaignChange}
+            className="bg-black text-green-400 border border-green-800 text-xs p-1 rounded font-mono outline-none hover:border-green-600 transition-colors"
+          >
+            {campaigns.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Right-side event card */}
       {selectedEvent && !showVideo && (
@@ -73,10 +110,9 @@ export default function App() {
         />
       )}
 
-      {/* Bottom-left legend */}
       <Legend />
 
-      {/* Event count badge (live mode) */}
+      {/* Active arc count badge (live mode) */}
       {mode === 'live' && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 fade-in">
           <div className="mil-panel border-glow px-4 py-2 text-center">
@@ -89,13 +125,15 @@ export default function App() {
         </div>
       )}
 
-      {/* Timeline (only in timeline mode) */}
+      {/* Timeline panel */}
       {mode === 'timeline' && (
         <Timeline
           events={events}
           currentTime={currentTime}
           isPlaying={isPlaying}
           speed={speed}
+          startTime={currentCampaign.start}
+          endTime={currentCampaign.end}
           onTimeChange={setCurrentTime}
           onPlayPause={() => setIsPlaying((p) => !p)}
           onSpeedChange={setSpeed}
@@ -103,7 +141,6 @@ export default function App() {
         />
       )}
 
-      {/* Corner decoration */}
       <div className="absolute bottom-4 left-4 z-20 text-green-900 text-xs pointer-events-none select-none">
         <div>◈ DATA: OSINT / PUBLIC REPORTING</div>
         <div>◈ SIMULATED EVENTS MARKED ◈</div>
