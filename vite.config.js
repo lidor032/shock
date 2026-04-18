@@ -15,7 +15,7 @@ export default defineConfig({
   resolve: {
     alias: {
       // Force the classic WebGL build — three-globe doesn't support the WebGPU entry yet
-      three: 'three/build/three.module.js',
+      three: '/Users/lidor/Desktop/stam/node_modules/three/build/three.module.js',
     },
   },
 })
