@@ -92,32 +92,32 @@ Optional flags:
 - htmlData: origin labels only for active events
 - Globe textures: loaded from unpkg CDN (external runtime dependency)
 
-## Phase Roadmap Status (as of 2026-04-18)
-Phase 1: OSINT Data Generation — Oct 7, 2023 events
-  - Gap: No events between Oct 7–31, 2023 in current data (earliest event is ID 25: Oct 8 carrier deployment)
-  - There is no Hamas ground assault, rocket barrage, IDF mobilization data, or Gaza ground invasion (Oct 27) data
-  - Missing ~8-12 key events from Oct/Nov 2023 period
-  - The LOC dictionary has all needed coordinates (Gaza Strip must be added inline)
-Phase 2: Physics & Performance Optimization
-  - arcAltitude: computeArcAlt() is ALREADY implemented and working for strike types
-  - Deployment/airlift types correctly bypass it and use per-event values
-  - useMemo: ALREADY implemented correctly with stable activeEventKey
-  - Remaining gap: no camera tilt (pointOfView uses lat/lng/altitude, no tilt param)
-  - pointsMerge={false} is correct; no virtualization needed at 28 events
-Phase 3: UI/UX
-  - No fullscreen API implementation
-  - No country flag display
-  - No camera tilt (react-globe.gl v2 does not expose tilt natively; requires three.js camera access)
+## Vercel / Deployment Status (as of 2026-04-18)
+- No vercel.json present
+- No .env files present (VITE_NEWS_API_KEY not configured)
+- No error boundaries anywhere in the component tree
+- Globe textures loaded from unpkg CDN (single point of failure in production)
+- index.html title and meta are functional but have no OG/social tags
 
-## Known Issues (verified)
-- LiveClock in Header.jsx uses useState() as a side-effect setter (should be useEffect)
-- Header status chips (IRAN THREAT, ACTIVE OPS, US CARRIERS) are hardcoded strings
-- YouTube embed uses listType=search which Google has deprecated; autoplay may be blocked
-- No vercel.json; no .env files present
-- No error boundaries anywhere
-- useNews loading/error state not consumed in App.jsx
-- Globe textures loaded from unpkg CDN (external dependency risk)
-- Event ID 24 (USS Carl Vinson, 2026-04-10) appears out of numerical order after ID 28
-- TIMELINE_END is 2026-04-17 (yesterday relative to 2026-04-18)
-- Missing Gaza Strip coordinate in LOC dictionary (events use inline coords)
-- colors.js TYPE_COLORS uses emoji (potential render issues in some environments)
+## Known Bugs (verified)
+- LiveClock in Header.jsx uses useState() as a side-effect interval setter (should be useEffect)
+  - This means the interval is set on every render, not cleaned up correctly
+- Header status chips (IRAN THREAT, ACTIVE OPS, US CARRIERS) are hardcoded static strings
+  - ACTIVE OPS counter does not reflect activeEvents.length
+- YouTube embed uses listType=search which Google has deprecated; modal may show blank
+- useNews loading/error state returned but never consumed in App.jsx (silently swallowed)
+- Event ID 24 (USS Carl Vinson, 2026-04-10) appears out of numerical order at bottom of array
+- TIMELINE_END is 2026-04-17 (one day behind current date 2026-04-18)
+
+## Data Gaps (verified)
+- No events from Oct 7–20, 2023 (the opening of the conflict): no Hamas ground assault, rocket barrage from Gaza, or IDF mobilization events
+- No Gaza ground invasion event (Oct 27, 2023)
+- Missing approx 8–12 events from Oct–Nov 2023 period
+- Gaza Strip coordinate not in LOC dictionary; events use inline coords instead
+- Northern Arrows campaign (Sep 15 – Nov 30, 2024) has events but no dedicated Hezbollah-initiates-rocket-campaign event to anchor the start
+
+## Architecture Concerns
+- All state lives in App.jsx (currently manageable at 28 events / 7 components; will need splitting if event count exceeds ~100)
+- currentCampaign derived via useMemo but currentTime initialized once at mount, not reactive to campaign switches via useMemo (handled by handleCampaignChange callback — fragile if new code path bypasses it)
+- No React.memo on any child component; Globe3D receives stable props but Header/Legend/NewsFeed re-render on every App state change
+- EventCard uses array index as key for targets (key={i}) — minor but should be target.label
