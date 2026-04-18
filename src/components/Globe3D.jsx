@@ -135,28 +135,30 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   }, [])
 
   // ── Initialize globe controls ──────────────────────────────────────────────
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (globeRef.current) {
-        // Strategic side-angle view — looking at the Middle East from across a table,
-        // not top-down from satellite. altitude 2.0 gives a cinematic war-room perspective.
-        globeRef.current.pointOfView({ lat: INIT_LAT, lng: INIT_LNG, altitude: INIT_ALT }, 0)
-        const controls = globeRef.current.controls()
-        if (controls) {
-          controls.enableRotate = true
-          controls.enableZoom   = true
-          controls.enablePan    = true
-          controls.autoRotate   = false
-          controls.zoomSpeed    = 1.0
-          controls.rotateSpeed  = 0.8
-          // Constrain vertical orbit to a horizontal band — prevents user from flipping
-          // to a top-down or bottom-up view; keeps the war-room table angle locked.
-          controls.minPolarAngle = Math.PI * 0.35
-          controls.maxPolarAngle = Math.PI * 0.65
-        }
+  // Called by onGlobeReady (WebGL truly initialized); 5000ms timer is a safety
+  // fallback for mobile Safari where the callback may fire late or not at all.
+  const handleGlobeReady = useCallback(() => {
+    if (globeRef.current) {
+      globeRef.current.pointOfView({ lat: INIT_LAT, lng: INIT_LNG, altitude: INIT_ALT }, 0)
+      const controls = globeRef.current.controls()
+      if (controls) {
+        controls.enableRotate = true
+        controls.enableZoom   = true
+        controls.enablePan    = true
+        controls.autoRotate   = false
+        controls.zoomSpeed    = 1.0
+        controls.rotateSpeed  = 0.8
+        // Constrain vertical orbit to a horizontal band — prevents user from flipping
+        // to a top-down or bottom-up view; keeps the war-room table angle locked.
+        controls.minPolarAngle = Math.PI * 0.35
+        controls.maxPolarAngle = Math.PI * 0.65
       }
-      setReady(true)
-    }, 800)
+    }
+    setReady(true)
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setReady(true), 5000)
     return () => clearTimeout(timer)
   }, [])
 
@@ -370,8 +372,8 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
         width={dims.w}
         height={dims.h}
 
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
-        backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
+        globeImageUrl="https://unpkg.com/three-globe/example/img/earth-night.jpg"
+        backgroundImageUrl="https://unpkg.com/three-globe/example/img/night-sky.png"
         atmosphereColor="#00cc44"
         atmosphereAltitude={0.18}
 
@@ -413,6 +415,8 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
 
         enablePointerInteraction={true}
         animateIn={false}
+        waitForGlobeReady={false}
+        onGlobeReady={handleGlobeReady}
       />
 
       {!ready && (
