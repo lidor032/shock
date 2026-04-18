@@ -232,16 +232,21 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
     })
   }, [activeEventKey, selectedId, events]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── HTML labels ───────────────────────────────────────────────────────────
+  // ── HTML labels + flag markers ────────────────────────────────────────────
+  // Combines event labels (dynamic, keyed to activeEvents) and static country
+  // flag markers into one array. react-globe.gl only supports a single
+  // htmlElementsData prop, so both types share the same layer.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const htmlData = useMemo(() =>
-    activeEvents.map((ev) => ({
+  const htmlData = useMemo(() => [
+    ...activeEvents.map((ev) => ({
       lat:   ev.origin.lat,
       lng:   ev.origin.lng,
       text:  ev.origin.label,
       color: getTypeColor(ev.type),
+      _type: 'label',
     })),
-  [activeEventKey]) // eslint-disable-line react-hooks/exhaustive-deps
+    ...FLAG_MARKERS,
+  ], [activeEventKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Interaction handlers (stable refs) ────────────────────────────────────
   const handlePointClick = useCallback((pt) => {
