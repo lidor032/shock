@@ -68,7 +68,7 @@ export default function App() {
     endTime:   currentCampaign.end,
   })
 
-  const { headlines } = useNews()
+  const { headlines, error: newsError } = useNews()
 
   // ── Event handlers ─────────────────────────────────────────────────────────
   const handleEventClick = useCallback((event) => {
@@ -97,9 +97,9 @@ export default function App() {
         </GlobeErrorBoundary>
       </div>
 
-      <NewsFeed headlines={headlines} />
+      <NewsFeed headlines={headlines} newsError={newsError} />
 
-      <Header mode={mode} onModeChange={(m) => { setMode(m); setSelected(null) }} />
+      <Header mode={mode} onModeChange={(m) => { setMode(m); setSelected(null) }} activeEvents={activeEvents} />
 
       {/* Campaign selector — visible in timeline mode */}
       {mode === 'timeline' && (

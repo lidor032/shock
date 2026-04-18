@@ -1,6 +1,6 @@
+import React, { useState } from 'react'
 import { TYPE_COLORS, COUNTRY_COLORS } from '../utils/colors'
 import { EVENT_TYPES, COUNTRIES } from '../data/events'
-import { useState } from 'react'
 
 // Strike types — fast projectile events
 const STRIKE_TYPES = [
@@ -18,7 +18,7 @@ const MOVEMENT_TYPES = [
   EVENT_TYPES.AIRLIFT,
 ]
 
-export default function Legend() {
+function Legend() {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
@@ -134,3 +134,5 @@ function DotSwatch({ color }) {
     />
   )
 }
+
+export default React.memo(Legend)
