@@ -997,6 +997,19 @@ Three work orders sent to agents:
 - Fullscreen toggle: `src/components/FullscreenToggle.jsx` — HTML5 Fullscreen API, 'F' key shortcut, HUD-styled
 - Files changed: `src/components/Globe3D.jsx`, `src/components/FullscreenToggle.jsx` (new), `src/App.jsx`, `src/index.css`
 
+#### Phase 2 QA Detail: QA Analyst — Codebase Audit & Section 5
+
+**QA & Performance Analyst — Initial Codebase Audit** ✅ COMPLETE
+- Reviewed all source files: App.jsx, Globe3D.jsx, Timeline.jsx, EventCard.jsx, VideoModal.jsx, Header.jsx, NewsFeed.jsx, Legend.jsx, useSimulation.js, useNews.js, colors.js, events.js, newsHeadlines.js
+- Verdict: CONDITIONAL PASS — core RAF/memoization architecture is sound; no memory leaks in cleanup paths
+- Documented 4 P0 bugs (no error boundary, zero tests, missing res.ok check, no schema validation)
+- Documented confirmed runtime bugs: cursor-stuck-as-pointer in live mode (Globe3D.jsx:285,297), key={i} on EventCard targets (line 75) and NewsFeed ticker (line 19), NaN sliderValue on zero-duration campaign (Timeline.jsx:17)
+- Documented performance gap: Header/Legend/NewsFeed/EventCard re-render at 60fps in timeline mode — need React.memo; 4 inline Globe props need useCallback
+- Wrote full test plan: Vitest setup, schema validation tests, color utility tests, useSimulation tests, Timeline tests, App integration tests (with Globe3D mock strategy)
+- Validated all 28 event objects against schema — no missing fields, no duplicate IDs; noted ID 24 out of physical array order
+- Files changed: `PROJECT_NOTES.md` (Section 5 filled in), `.claude/agent-memory/qa-performance-analyst/project_qa_findings.md` (new), `.claude/agent-memory/qa-performance-analyst/MEMORY.md` (updated)
+- Follow-up: P0 fixes (error boundary, res.ok check, test setup) should be scheduled as a work order before any deployment
+
 #### Phase 3: Bug Fixes (Team Lead)
 - **Globe loading screen stuck**: Moved `if (!globeRef.current) return` guard inside setTimeout; `setReady(true)` now fires regardless. Bumped delay 400→800ms.
   - File: `src/components/Globe3D.jsx`
