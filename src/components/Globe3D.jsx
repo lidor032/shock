@@ -136,26 +136,27 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
 
   // ── Initialize globe controls ──────────────────────────────────────────────
   useEffect(() => {
-    if (!globeRef.current) return
     const timer = setTimeout(() => {
-      // Strategic side-angle view — looking at the Middle East from across a table,
-      // not top-down from satellite. altitude 2.0 gives a cinematic war-room perspective.
-      globeRef.current.pointOfView({ lat: INIT_LAT, lng: INIT_LNG, altitude: INIT_ALT }, 0)
-      const controls = globeRef.current.controls()
-      if (controls) {
-        controls.enableRotate = true
-        controls.enableZoom   = true
-        controls.enablePan    = true
-        controls.autoRotate   = false
-        controls.zoomSpeed    = 1.0
-        controls.rotateSpeed  = 0.8
-        // Constrain vertical orbit to a horizontal band — prevents user from flipping
-        // to a top-down or bottom-up view; keeps the war-room table angle locked.
-        controls.minPolarAngle = Math.PI * 0.35
-        controls.maxPolarAngle = Math.PI * 0.65
+      if (globeRef.current) {
+        // Strategic side-angle view — looking at the Middle East from across a table,
+        // not top-down from satellite. altitude 2.0 gives a cinematic war-room perspective.
+        globeRef.current.pointOfView({ lat: INIT_LAT, lng: INIT_LNG, altitude: INIT_ALT }, 0)
+        const controls = globeRef.current.controls()
+        if (controls) {
+          controls.enableRotate = true
+          controls.enableZoom   = true
+          controls.enablePan    = true
+          controls.autoRotate   = false
+          controls.zoomSpeed    = 1.0
+          controls.rotateSpeed  = 0.8
+          // Constrain vertical orbit to a horizontal band — prevents user from flipping
+          // to a top-down or bottom-up view; keeps the war-room table angle locked.
+          controls.minPolarAngle = Math.PI * 0.35
+          controls.maxPolarAngle = Math.PI * 0.65
+        }
       }
       setReady(true)
-    }, 400)
+    }, 800)
     return () => clearTimeout(timer)
   }, [])
 
