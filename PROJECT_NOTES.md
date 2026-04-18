@@ -343,7 +343,224 @@ Events that need high altitudes (ballistic missiles: IDs 4, 5, 10, 20, 22) use e
 ---
 
 ## 4. Events Engineer — Data & Content
-[To be filled by Events agent]
+
+### Data Schema & Structure
+
+**File location:** `/Users/lidor/Desktop/stam/src/data/events.js`
+
+The event database is a static JavaScript export containing 28 event objects plus supporting enums and location presets. No database is used; all event data is hardcoded and must be manually edited to add/modify events.
+
+**Event object fields:**
+- `id` (number): Sequential identifier used as React key
+- `date` (string): ISO date "YYYY-MM-DD"
+- `timestamp` (number): Unix milliseconds; populated via helper `ts()` function
+- `title` (string): Short headline (~60 chars max)
+- `subtitle` (string): One-liner contextual detail (~100 chars)
+- `description` (string): 2–4 sentence factual narrative
+- `type` (string): One of 8 EVENT_TYPES enum values
+- `importance` (string): "critical", "major", or unspecified
+- `origin` (object): `{lat, lng, label}` — launch/start point; uses LOC dictionary or inline coords
+- `targets` (array): `[{lat, lng, label}, ...]` — one or more impact locations
+- `country` (string): Primary actor; one of 7 COUNTRIES enum values
+- `casualties` (string): Free-text casualty report (no structured format)
+- `source` (string): Attribution (Reuters, AP, BBC, IDF, IRNA, etc.)
+- `searchQuery` (string): Historical reference keyword for verification
+- `tags` (array): String tags for filtering and categorization
+- `arcAltitude` (number): Visual arc height override for Globe3D [0–1 range]
+- `arcSpeed` (number): Arc animation duration in milliseconds
+- `arcColor` (array): `[startColor, endColor]` hex strings for arc gradient
+- `simulated` (boolean): Optional flag for hypothetical/speculative events
+
+**Enums:**
+
+EVENT_TYPES (8 values):
+- `missile` — ballistic/cruise missile strikes
+- `airstrike` — air-delivered ordnance (F-35, B-1B, B-2, etc.)
+- `drone` — loitering/armed drones
+- `naval` — maritime surface operations
+- `defense` — air defense, interception, ceasefire agreements
+- `ground` — ground incursion, armor movement, logistics
+- `deployment` — force movement and positioning (surface-hugging arcs)
+- `airlift` — strategic air transport (C-17 Globemasters, tanker refueling)
+
+COUNTRIES (7 values):
+- State actors: `Iran`, `Israel`, `USA`
+- Non-state actors: `Hezbollah`, `Houthi`, `Iraq PMF`, `Hamas (Terror Org)`
+
+Note: COUNTRIES enum mixes state and non-state entities, creating an inconsistent classification. "Hamas (Terror Org)" is editorially labeled.
+
+**Location Dictionary (LOC):**
+26 predefined geographic coordinates with human-readable labels. Stored in events.js as a `const` object used for `origin` and `targets` properties. Examples: `LOC.TEHRAN`, `LOC.NEVATIM`, `LOC.BEIRUT`, `LOC.USS_FORD`, `LOC.RED_SEA`. Gaza-related events use inline coordinates rather than a LOC entry, creating maintenance inconsistency.
+
+**Campaign Definitions:**
+Three timelines defined in the campaigns array:
+1. `all` (Iron Swords) — Oct 7, 2023 to Apr 17, 2026 (entire conflict)
+2. `days-of-repentance` — Oct 20–30, 2024 (Israeli strike operation window)
+3. `northern-arrows` — Sep 15 – Nov 30, 2024 (Lebanon/Hezbollah campaign)
+
+---
+
+### Event Categories & Coverage
+
+**Inventory: 28 total events**
+
+| Period | Count | Events | Coverage |
+|---|---|---|---|
+| Oct–Dec 2023 | 5 | USS Gerald R. Ford, USS Eisenhower, C-17 airlift, THAAD deployment, no Oct 7 | **GAP: Oct 7 attack, Gaza ground invasion, Oct–Nov daily operations** |
+| Jan–Apr 2024 | 7 | Tower 22, US retaliation, Iranian consulate strike, True Promise I, Houthi strikes, Isfahan drone | Complete Iran–Israel escalation cycle |
+| May–Sept 2024 | 4 | Majdal Shams, pager operation, Nasrallah assassination, Houthi shipping strikes | Hezbollah intensification |
+| Oct–Nov 2024 | 5 | True Promise II, Days of Repentance, Lebanon ground invasion, ceasefire, USS Abraham Lincoln | Lebanon war + carrier deployments |
+| Jan–May 2025 | 5 | Gaza ceasefire Phase 1, ceasefire collapse, US–Iran talks, B-2 strike on Sanaa, Natanz strike | **GAP: May–Dec 2025 (6-month void)** |
+| Jan–Apr 2026 | 2 | True Promise III (Jan 15), US–Israel joint strike on IRGC (Mar 8), USS Carl Vinson (Apr 10) | Simulated future escalation |
+
+**By event type:**
+- Missile strikes: 6 (Iran True Promise I/II/III, Houthi Yemen salvo)
+- Airstrikes: 8 (Israel F-35 on Damascus/Isfahan/Gaza, US B-1B/B-2 on Iraq/Syria/Yemen)
+- Drone strikes: 3 (Iran-backed Iraq, Israel intelligence ops)
+- Deployments: 4 (USS carriers, THAAD, C-17 logistics)
+- Ground operations: 2 (Lebanon invasion, intelligence pager op)
+- Defense/ceasefire: 2 (air defense integration, negotiated ceasefires)
+
+**Geographic distribution:**
+- Iran–Israel theater: 11 events (escalation cycles, retaliations)
+- Lebanon–Israel front: 5 events (Hezbollah strikes, Nasrallah, ceasefire)
+- Red Sea / Houthi campaign: 4 events (shipping strikes, US naval response)
+- Gaza: 2 events (2025+ ceasefire only; ground war absent)
+- Iraq / Syria / Jordan: 3 events (Tower 22, US retaliation)
+- US deployments: 5 events (carrier strike groups, THAAD, airlift)
+
+---
+
+### Data Quality Observations
+
+**Strengths:**
+1. **Consistent schema** — All 28 events follow the same field structure with no missing required properties
+2. **Verified coordinates** — Military bases use real, accurate coordinates (e.g., Nevatim: 31.2077°N, 35.0127°E; Isfahan: 32.6546°N, 51.6680°E)
+3. **Source attribution** — Every event cites primary sources (Reuters, AP, BBC, IDF, IRNA, Jerusalem Post, etc.)
+4. **Temporal accuracy** — Event dates align with confirmed historical incidents (Apr 13 True Promise I, Sep 17 pagers, Oct 26 Days of Repentance)
+5. **Visual parameters** — arc styling (altitude, speed, color) applied consistently within event types
+6. **Tagging system** — Events include semantic tags ("historic", "F-35", "Shahed", "nuclear") for filtering
+
+**Critical gaps:**
+
+1. **October 7, 2023 attack missing.** The foundational event of the entire conflict — Hamas rocket barrage + ground assault on southern Israel, ~2,000 Israeli casualties, Nova festival massacre — is absent. Timeline effectively starts Oct 8 with a carrier deployment, not the conflict trigger. This is the single most critical data gap.
+
+2. **Gaza ground invasion not represented.** The IDF's Oct 27, 2023 ground incursion into Gaza — one of the largest military operations in Israeli history — has no event. Gaza War (Oct 2023 – May 2024) is represented only by 2025+ ceasefire events.
+
+3. **October–November 2023 severely under-indexed.** Only 5 events total for a 2-month period during the most active combat phase. Missing: Rafah crossing, initial IDF Gaza airstrikes, Hezbollah cross-border rocket fire initiation, humanitarian corridor openings.
+
+4. **Gaza coordinate inconsistency.** Gaza-related events use inline coordinates `{lat: 31.5017, lng: 34.4674}` instead of a named LOC entry. No `LOC.GAZA_CITY` or granular Gaza district presets (Gaza City vs. Khan Younis vs. Rafah vs. Shati). This makes Gaza event management fragile.
+
+5. **Importance ratings ambiguous.** "critical" is applied to both historic turning-points (Oct 7, April 13 True Promise I) AND routine carrier deployments (USS Abraham Lincoln). No quantitative rubric (e.g., >100 casualties = critical). Calibration is inconsistent.
+
+6. **Simulated events mixed into timeline.** 6 events (IDs 22, 23, 24) are flagged `simulated: true` but are interspersed chronologically with real events (ID 22 is Jan 15, 2026; ID 25–28 are Oct 2023). Users may not immediately recognize these as hypothetical.
+
+7. **May–December 2025 void.** No events between May 2025 (B-2 strike on Sanaa, ID 20) and January 2026 (True Promise III, ID 22). This 6-month gap suggests incomplete coverage or assumption that the conflict "pauses."
+
+8. **Casualty counts lack structure.** All casualties stored as free-text strings. No distinction between confirmed, disputed, military vs. civilian, or source variation (e.g., "400+ killed (Gazan MoH)" vs. Israeli estimates). Impossible to analyze casualty patterns programmatically.
+
+9. **Munition types not recorded.** No field captures missile/drone/bomb nomenclature. Events mention "Shahed-136", "Fattah-1", "JDAM" in description text only. Cannot filter by capability or create capability timeline.
+
+10. **Missing metadata for damage assessment.** No field for facility status post-strike (destroyed, damaged, degraded, minimal). Cannot track infrastructure attrition or strategic effect.
+
+11. **Coordinate precision not documented.** Some locations are exact military bases; others are city-level approximations. No `precision: "exact" | "approximate" | "city-level"` field. Majdal Shams origin is vague (SOUTHERN_LEB placeholder).
+
+12. **COUNTRIES enum editorially labeled.** "Hamas (Terror Org)" is not neutral; violates OSINT data purity. Should be "Hamas" with optional separate classification field if needed.
+
+---
+
+### Event Flow: Data to Visualization
+
+**Data path:**
+
+1. **Static definition** → `src/data/events.js` exports `events` array + `campaigns` + `EVENT_TYPES` + `COUNTRIES` enums
+
+2. **App.jsx imports & state management** → Events passed as prop to all child components; `currentTime` and `activeCampaignId` state drive filtering
+
+3. **useSimulation hook** → Receives full `events` array + `currentTime` + campaign `startTime`/`endTime`
+   - Filters events where `timestamp <= currentTime`
+   - Returns stable `activeEvents` array via `useMemo` (keyed by sorted ID strings to prevent excessive recalculation)
+   - RAF loop advances `currentTime` based on `isPlaying` and `speed` multiplier
+
+4. **Globe3D component** → Receives full `events` + `activeEvents` + `selectedEvent`
+   - Renders arcs for all `activeEvents` (origin → each target)
+   - Arc styling derived from `arcAltitude`, `arcSpeed`, `arcColor` properties
+   - Height computed dynamically via `computeArcAlt()` for realism (strike arcs taller than deployments)
+   - Click handler triggers `onEventClick(event)` → sets `selectedEvent` in App state
+   - Points and labels placed at coordinates
+
+5. **Timeline component** → Receives `events` + `startTime`/`endTime` + `currentTime`
+   - Filters events within campaign window
+   - Renders colored dots on scrubber bar (size/color by importance)
+   - Click dot seeks to event timestamp + selects event
+
+6. **EventCard component** → Receives single `selectedEvent` + `onCloseCard` handler
+   - Renders title, subtitle, description, metadata (casualties, source, tags)
+   - Lists targets with coordinates
+   - "Watch video" button triggers VideoModal
+
+7. **VideoModal component** → YouTube search CTA; links to external video search by event `searchQuery`
+
+8. **Legend component** → Reads EVENT_TYPES and COUNTRIES enums; renders static color legend
+
+**Data consumption points:**
+- `getTypeColor()` in `utils/colors.js` — maps EVENT_TYPES to hex colors
+- `getImportanceColor()` — maps importance string to hex color
+- Timeline scrubber — importance value determines dot size
+- Globe arc rendering — `arcColor`, `arcAltitude`, `arcSpeed` directly used by react-globe.gl
+
+---
+
+### Concrete TODOs — Prioritized
+
+#### P0 — Blocker (required before any data release)
+
+| Task | File(s) | Details | Effort |
+|---|---|---|---|
+| **Add October 7, 2023 event** | `src/data/events.js` | Core foundational event. Include Hamas rocket barrage, ground assault, kibbutz massacres. Origin: Gaza (LOC.GAZA or inline ~31.5°N, 34.5°E). Targets: Israeli border communities, Nova festival site. ~3,000 casualties. Importance: critical. Sourced: IDF, Reuters, BBC. This event must exist or the timeline narrative is broken. | 1–2 hrs |
+| **Add October 27, 2023 Gaza ground invasion** | `src/data/events.js` | IDF armored columns cross Gaza border; artillery begins. Origin: Israeli border. Targets: Gaza City, northern Gaza districts. Casualty estimates contested. Importance: critical. This is a major military operation that MUST be represented. | 1–2 hrs |
+| **Create LOC.GAZA_CITY entry** | `src/data/events.js` | Add to LOC dictionary: `GAZA_CITY: { lat: 31.5017, lng: 34.4674, label: 'Gaza City' }`. Normalize all Gaza event coords to use LOC. Prevents future coordinate drift. | 30 mins |
+| **Fill Oct–Nov 2023 gap with ~4–6 events** | `src/data/events.js` | Add: initial Hezbollah rocket fire into northern Israel (Sep 2024? or Oct 2023 precursor?), major IDF Gaza airstrikes, Rafah crossing operation, casualty milestones. Research and add at least 4 to prevent narrative collapse. | 4–6 hrs |
+
+#### P1 — High priority (data completeness & consistency)
+
+| Task | File(s) | Details | Effort |
+|---|---|---|---|
+| **Add Northern Arrows campaign anchor event** | `src/data/events.js` | `campaigns[2]` starts Sep 15, 2024, but first event (ID 8, Pager Op) is Sep 17. Add Sep 15 event: Hezbollah initiates rocket barrage into northern Israel (the _reason_ the campaign exists). Otherwise campaign lacks its opening trigger. | 1–2 hrs |
+| **Separate simulated from real events** | `src/data/events.js` | All 6 simulated events (IDs 22, 23, 24, and others) should be moved to a separate `simulatedEvents` export or marked with prominent `simulated: true` flag (already present for some). Consider UI-level separation or "forecast" campaign mode. | 1–2 hrs |
+| **Add ~6 events: 2025 Q3–Q4 gap** | `src/data/events.js` | Six-month void between May 2025 (B-2 strike) and Jan 2026 (True Promise III). Either the conflict genuinely paused, or events are missing. Research and fill with reasonable escalation pathway, OR explicitly document why the gap exists. | 4–8 hrs |
+| **Calibrate importance ratings** | `src/data/events.js` | Establish rubric (e.g., >100 casualties OR strategic facility destroyed = critical; routine deployments = major; minor skirmishes = default). Audit all 28 events and recalibrate. | 2 hrs |
+| **Refactor COUNTRIES enum** | `src/data/events.js` | Split into STATE_ACTORS and NON_STATE_ACTORS, OR remove "(Terror Org)" from Hamas label for neutrality, OR add separate `classification` field. Current mixed enum is confusing. | 1 hr |
+
+#### P2 — Medium priority (data quality & maintenance)
+
+| Task | File(s) | Details | Effort |
+|---|---|---|---|
+| **Add munition type field** | `src/data/events.js` | New optional field `munitions: ['F-35I', 'JDAM', ...]`. Extract from descriptions and normalize. Enables filtering by capability. | 3–4 hrs |
+| **Add casualty source tracking** | `src/data/events.js` | Extend `casualties` field or add new field: `{ count: "400+", source: "Gaza MoH", disputed: true }`. Distinguish official vs. contested counts. | 2–3 hrs |
+| **Add damage assessment field** | `src/data/events.js` | New field `damage: { type: "infrastructure" | "personnel" | "mixed", status: "destroyed" | "damaged" | "degraded" }`. Track facility degradation. | 2 hrs |
+| **Document coordinate precision** | `src/data/events.js` | Add `precision: { level: "exact" | "approximate" | "city-level", notes: "..." }`. Flag Majdal Shams and other approximations. | 1–2 hrs |
+| **Add strike confirmation field** | `src/data/events.js` | New field `confirmation: { status: "confirmed" | "disputed" | "alleged", sources: ["Reuters", "IDF"] }`. Distinguish reported vs. confirmed events. | 2 hrs |
+| **Expand location presets** | `src/data/events.js` | Add Gaza sub-districts: KHAN_YOUNIS, RAFAH, SHATI, BEIT_HANOUN. Add Lebanese sub-regions: TYRE, SIDON, BAALBEK. Future-proofs granular event placement. | 1 hr |
+
+#### P3 — Lower priority (future enhancements)
+
+| Task | File(s) | Details | Effort |
+|---|---|---|---|
+| **Add event metadata: interception rates** | `src/data/events.js` | For defensive events (air defense), record what percentage of projectiles were intercepted. Enables defensive-effectiveness analysis. | 2 hrs |
+| **Create secondary actors field** | `src/data/events.js` | New field `secondaryActors: ["USA", "UK", "France"]` for multi-national operations (e.g., coalition airstrikes). Improves precision. | 2 hrs |
+| **Add event series/campaign tags** | `src/data/events.js` | Tag events with abstract campaign names: `campaigns: ["Iron Swords", "Operation True Promise", "Days of Repentance"]`. Enables thematic grouping beyond date ranges. | 2 hrs |
+| **Version the events schema** | `src/data/events.js` | Add `schema_version: "1.0"` export. When fields are added in future, increment version and document migrations for backward compatibility. | 30 mins |
+
+---
+
+### Summary
+
+The events database is **functionally complete but narratively incomplete**. The schema is well-structured and consistent; visualization integration is clean. However, critical historical events are absent (October 7, Gaza ground invasion), entire operational periods are under-indexed (Oct–Nov 2023), and the dataset carelessly mixes real and simulated events.
+
+**The highest-impact work is filling narrative gaps, not schema refactoring.** The October 7 event is non-negotiable; Gaza coverage must expand; and the 2025 void must be explained or closed. Once those gaps are fixed, the 12 P1/P2 enhancements (casualty source tracking, damage assessment, munition types, coordinate precision) will make the data suitable for serious OSINT analysis and filtering.
+
+_Section written by Events Engineer agent on 2026-04-18._
 
 ---
 
