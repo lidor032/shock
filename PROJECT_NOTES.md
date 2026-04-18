@@ -977,9 +977,11 @@ _All agents and the team lead MUST log completed work here. Format: date, who, w
 Three work orders sent to agents:
 
 **WO-1: Events Engineer — Batch #1 Historical Data (Oct 7–31, 2023)**
-- Status: IN PROGRESS
-- Target: 40+ events covering Hamas Oct 7 attack, IDF response, carrier deployments
-- Output: `src/data/batch1_events.js`
+- Status: **BLOCKED — Awaiting schema clarification**
+- Blocking issue: Work order specifies new schema (id, type, title, date, description, source, importance 1-5, casualties {military, civilian, confirmed}, from/to coords, actor codes) incompatible with current events.js schema (importance strings, origin/targets[], country full names, casualties string, missing timestamp/subtitle/arc styling)
+- Escalated to team lead with three options: (A) adopt new schema wholesale, (B) map to existing schema (manual translation), (C) separate batch1_events.js with deferred reconciliation
+- Target: 40+ events covering Oct 7 attack (12), immediate response (12), escalation & ground prep (16+)
+- Output: TBD pending schema decision
 
 **WO-2: WebGL Engineer — Arc Physics & Performance** ✅ COMPLETE
 - Replaced flat `computeArcAlt()` with type×distance lookup table (`ARC_ALTITUDE_TABLE`) — 8 types × 3 distance buckets
