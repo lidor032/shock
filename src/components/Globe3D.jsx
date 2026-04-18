@@ -388,8 +388,8 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
         width={dims.w}
         height={dims.h}
 
-        globeImageUrl="https://unpkg.com/three-globe/example/img/earth-night.jpg"
-        backgroundImageUrl="https://unpkg.com/three-globe/example/img/night-sky.png"
+        globeImageUrl="/textures/earth-night.jpg"
+        backgroundImageUrl="/textures/night-sky.png"
         atmosphereColor="#00cc44"
         atmosphereAltitude={0.18}
 
