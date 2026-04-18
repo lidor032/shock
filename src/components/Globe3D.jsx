@@ -56,8 +56,17 @@ function arcStyle(ev, target) {
   }
 }
 
+// ── Keyboard navigation speed ────────────────────────────────────────────────
+const KEY_PAN_SPEED  = 3    // degrees per keypress
+const KEY_ZOOM_STEP  = 0.15 // altitude change per keypress
+const KEY_MIN_ALT    = 0.4
+const KEY_MAX_ALT    = 4.0
+
 export default function Globe3D({ events, activeEvents, selectedEvent, onEventClick }) {
   const globeRef = useRef()
+  const containerRef = useRef()
+  const keysDown = useRef(new Set())
+  const rafKeyRef = useRef(null)
   const [dims, setDims] = useState({ w: window.innerWidth, h: window.innerHeight })
   const [ready, setReady] = useState(false)
 
@@ -67,13 +76,75 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
     return () => window.removeEventListener('resize', handler)
   }, [])
 
+  // ── Initialize globe controls ──────────────────────────────────────────────
   useEffect(() => {
     if (!globeRef.current) return
     const timer = setTimeout(() => {
       globeRef.current.pointOfView({ lat: INIT_LAT, lng: INIT_LNG, altitude: INIT_ALT }, 1500)
+      // Ensure Three.js orbit controls are enabled
+      const controls = globeRef.current.controls()
+      if (controls) {
+        controls.enableRotate = true
+        controls.enableZoom   = true
+        controls.enablePan    = true
+        controls.autoRotate   = false
+        controls.zoomSpeed    = 1.0
+        controls.rotateSpeed  = 0.8
+      }
       setReady(true)
     }, 400)
     return () => clearTimeout(timer)
+  }, [])
+
+  // ── Keyboard navigation (WASD / Arrows / +- zoom) ─────────────────────────
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const onKeyDown = (e) => {
+      const key = e.key.toLowerCase()
+      if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','+','=','-','_'].includes(key)) {
+        e.preventDefault()
+        keysDown.current.add(key)
+        if (!rafKeyRef.current) tickKeys()
+      }
+    }
+
+    const onKeyUp = (e) => {
+      keysDown.current.delete(e.key.toLowerCase())
+      if (keysDown.current.size === 0 && rafKeyRef.current) {
+        cancelAnimationFrame(rafKeyRef.current)
+        rafKeyRef.current = null
+      }
+    }
+
+    function tickKeys() {
+      if (!globeRef.current || keysDown.current.size === 0) {
+        rafKeyRef.current = null
+        return
+      }
+      const pov = globeRef.current.pointOfView()
+      let { lat, lng, altitude } = pov
+      const keys = keysDown.current
+
+      if (keys.has('w') || keys.has('arrowup'))    lat = Math.min(90,  lat + KEY_PAN_SPEED)
+      if (keys.has('s') || keys.has('arrowdown'))  lat = Math.max(-90, lat - KEY_PAN_SPEED)
+      if (keys.has('a') || keys.has('arrowleft'))  lng -= KEY_PAN_SPEED
+      if (keys.has('d') || keys.has('arrowright')) lng += KEY_PAN_SPEED
+      if (keys.has('+') || keys.has('='))          altitude = Math.max(KEY_MIN_ALT, altitude - KEY_ZOOM_STEP)
+      if (keys.has('-') || keys.has('_'))          altitude = Math.min(KEY_MAX_ALT,  altitude + KEY_ZOOM_STEP)
+
+      globeRef.current.pointOfView({ lat, lng, altitude }, 120)
+      rafKeyRef.current = requestAnimationFrame(tickKeys)
+    }
+
+    el.addEventListener('keydown', onKeyDown)
+    el.addEventListener('keyup', onKeyUp)
+    return () => {
+      el.removeEventListener('keydown', onKeyDown)
+      el.removeEventListener('keyup', onKeyUp)
+      if (rafKeyRef.current) cancelAnimationFrame(rafKeyRef.current)
+    }
   }, [])
 
   // ── Stable memoization key ─────────────────────────────────────────────────
