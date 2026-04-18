@@ -163,17 +163,18 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   }, [])
 
   // ── Keyboard navigation (WASD / Arrows / +- zoom) ─────────────────────────
+  // Listeners on window (capture phase) so Safari fires them reliably without
+  // requiring the container div to hold focus — Safari won't fire keydown on
+  // non-input divs unless the window listener is used.
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
+    const NAV_KEYS = new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','+','=','-','_'])
 
     const onKeyDown = (e) => {
       const key = e.key.toLowerCase()
-      if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','+','=','-','_'].includes(key)) {
-        e.preventDefault()
-        keysDown.current.add(key)
-        if (!rafKeyRef.current) tickKeys()
-      }
+      if (!NAV_KEYS.has(key)) return
+      e.preventDefault()
+      keysDown.current.add(key)
+      if (!rafKeyRef.current) tickKeys()
     }
 
     const onKeyUp = (e) => {
@@ -204,11 +205,11 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
       rafKeyRef.current = requestAnimationFrame(tickKeys)
     }
 
-    el.addEventListener('keydown', onKeyDown)
-    el.addEventListener('keyup', onKeyUp)
+    window.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('keyup', onKeyUp, true)
     return () => {
-      el.removeEventListener('keydown', onKeyDown)
-      el.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('keyup', onKeyUp, true)
       if (rafKeyRef.current) cancelAnimationFrame(rafKeyRef.current)
     }
   }, [])
@@ -366,6 +367,7 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
       className="w-full h-full outline-none"
       tabIndex={0}
       onMouseDown={() => containerRef.current?.focus()}
+      onTouchStart={() => containerRef.current?.focus()}
     >
       <Globe
         ref={globeRef}
