@@ -8,5 +8,8 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react-globe.gl', 'three'],
+    esbuildOptions: {
+      target: 'esnext',
+    },
   },
 })
