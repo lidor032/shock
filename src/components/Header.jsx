@@ -19,7 +19,7 @@ export default function Header({ mode, onModeChange }) {
 
       {/* Center — mode toggle */}
       <div className="flex-1 flex justify-center items-center pointer-events-none">
-        <div className="mil-panel border-glow flex rounded overflow-hidden">
+        <div className="mil-panel border-glow flex rounded overflow-hidden pointer-events-auto">
           <ModeBtn active={mode === 'live'} onClick={() => onModeChange('live')} color="red">
             <span className={`inline-block w-2 h-2 rounded-full mr-2 ${mode === 'live' ? 'bg-red-500 animate-pulse' : 'bg-red-900'}`} />
             LIVE
