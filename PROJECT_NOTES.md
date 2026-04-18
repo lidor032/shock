@@ -957,3 +957,50 @@ All 28 events conform to the documented schema. No missing required fields detec
 - Event ID 24 (`USS Carl Vinson`, `2026-04-10`) has `timestamp` 6 days before `TIMELINE_END` (`2026-04-17`). With today being `2026-04-18` and `TIMELINE_END` being yesterday, this event already falls outside the "all" campaign window unless `TIMELINE_END` is updated (flagged as P0 by Project Lead).
 
 ---
+
+## 6. Change Log
+
+_All agents and the team lead MUST log completed work here. Format: date, who, what was done, files changed._
+
+---
+
+### 2026-04-18 — Session 2
+
+#### Phase 1: Overview & Audit (all 5 agents)
+- **Project Lead** — Wrote Section 1: architecture summary, state shape, data layer, 10 known bugs (P-ranked), data coverage gaps, full P0–P3 roadmap, technical debt register. No code changes.
+- **WebGL Engineer** — Wrote Section 2: rendering architecture analysis, memoization strategy review, 11 performance TODOs (P0–P3), arc altitude model assessment. No code changes.
+- **UI Designer** — Wrote Section 3: visual design audit, layout/z-index map, CSS architecture review, component inventory, 14 TODOs. No code changes.
+- **Events Engineer** — Wrote Section 4: full schema documentation, 28-event inventory, 12 data quality observations, event flow diagram, 21 prioritized TODOs. No code changes.
+- **QA Analyst** — Wrote Section 5: conditional pass verdict, hooks audit, null guard analysis, performance concerns, memory leak audit, full test plan, browser compatibility. No code changes.
+
+#### Phase 2: Work Orders Dispatched
+Three work orders sent to agents:
+
+**WO-1: Events Engineer — Batch #1 Historical Data (Oct 7–31, 2023)**
+- Status: IN PROGRESS
+- Target: 40+ events covering Hamas Oct 7 attack, IDF response, carrier deployments
+- Output: `src/data/batch1_events.js`
+
+**WO-2: WebGL Engineer — Arc Physics & Performance** ✅ COMPLETE
+- Replaced flat `computeArcAlt()` with type×distance lookup table (`ARC_ALTITUDE_TABLE`) — 8 types × 3 distance buckets
+- Added Haversine `calculateDistance()` at module scope
+- Naval events: altitude 0, dashed arcs (`dl=0.4, dg=0.2`), forced navy-blue gradient `#1E3A5F → #4A90D9`
+- Deployment/airlift arcs: surface-hugging with convoy feel
+- Debug log: `arcLogFiredRef` gates console.group to fire once per arcsData recomputation
+- Per-event `arcAltitude` overrides preserved (backward compatible)
+- Files changed: `src/components/Globe3D.jsx`
+
+**WO-3: UI Designer — Camera, Fullscreen, Flags** ✅ COMPLETE
+- Camera: `pointOfView({ lat: 31.5, lng: 35.0, altitude: 2.0 }, 0)` — strategic side angle, not top-down
+- Polar angle constraints: `[Math.PI * 0.35, Math.PI * 0.65]` — locks horizontal band
+- Country flags: 10 flag markers (IL, IR, LB, PS, YE, IQ, SA, TR, EG, AE) via `htmlElementsData` with `_type: 'flag'` discriminator
+- Fullscreen toggle: `src/components/FullscreenToggle.jsx` — HTML5 Fullscreen API, 'F' key shortcut, HUD-styled
+- Files changed: `src/components/Globe3D.jsx`, `src/components/FullscreenToggle.jsx` (new), `src/App.jsx`, `src/index.css`
+
+#### Phase 3: Bug Fixes (Team Lead)
+- **Globe loading screen stuck**: Moved `if (!globeRef.current) return` guard inside setTimeout; `setReady(true)` now fires regardless. Bumped delay 400→800ms.
+  - File: `src/components/Globe3D.jsx`
+- **Fullscreen button overlapping EventCard**: Moved button from `right: 20px` to `left: 20px` (CSS + inline style).
+  - Files: `src/components/FullscreenToggle.jsx`, `src/index.css`
+
+---
