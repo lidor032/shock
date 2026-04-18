@@ -6,4 +6,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react-globe.gl', 'three'],
   },
+  build: {
+    target: 'esnext',
+  },
 })

@@ -106,7 +106,7 @@ body::after {
   100% { transform: translateX(-100%); }
 }
 .ticker-track {
-  animation: ticker-scroll 80s linear infinite;
+  animation: ticker-scroll 180s linear infinite;
   white-space: nowrap;
   display: inline-block;
 }

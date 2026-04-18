@@ -6,6 +6,17 @@ const INIT_LAT = 31
 const INIT_LNG  = 44
 const INIT_ALT  = 1.3
 
+const COUNTRY_FLAGS = [
+  { lat: 31.7683, lng: 35.2137, flag: '🇮🇱', name: 'Israel' },
+  { lat: 35.6892, lng: 51.3890, flag: '🇮🇷', name: 'Iran' },
+  { lat: 33.8938, lng: 35.5018, flag: '🇱🇧', name: 'Lebanon' },
+  { lat: 15.3694, lng: 44.1910, flag: '🇾🇪', name: 'Yemen' },
+  { lat: 33.3152, lng: 44.3661, flag: '🇮🇶', name: 'Iraq' },
+  { lat: -7.3195, lng: 72.4236, flag: '🇺🇸', name: 'Diego Garcia' },
+  { lat: 24.4686, lng: 54.3705, flag: '🇦🇪', name: 'UAE' },
+  { lat: 25.2854, lng: 51.5310, flag: '🇶🇦', name: 'Qatar' },
+]
+
 // Types whose arcs hug the surface and move slowly (logistical routes, not strikes)
 const DEPLOYMENT_TYPES = new Set(['deployment', 'airlift'])
 
@@ -76,6 +87,42 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
     return () => clearTimeout(timer)
   }, [])
 
+  // ── Keyboard globe rotation (WASD / Arrow keys) ───────────────────────────
+  useEffect(() => {
+    const keysDown = new Set()
+    const DELTA = 1.8
+
+    const onKeyDown = (e) => {
+      const k = e.key.toLowerCase()
+      if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)) {
+        e.preventDefault()
+        keysDown.add(k)
+      }
+    }
+    const onKeyUp = (e) => keysDown.delete(e.key.toLowerCase())
+
+    const interval = setInterval(() => {
+      if (!globeRef.current || keysDown.size === 0) return
+      const { lat, lng, altitude } = globeRef.current.pointOfView()
+      let newLat = lat, newLng = lng
+
+      if (keysDown.has('w') || keysDown.has('arrowup'))    newLat = Math.min(85, lat + DELTA)
+      if (keysDown.has('s') || keysDown.has('arrowdown'))  newLat = Math.max(-85, lat - DELTA)
+      if (keysDown.has('a') || keysDown.has('arrowleft'))  newLng = lng - DELTA
+      if (keysDown.has('d') || keysDown.has('arrowright')) newLng = lng + DELTA
+
+      globeRef.current.pointOfView({ lat: newLat, lng: newLng, altitude }, 0)
+    }, 16)
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+      clearInterval(interval)
+    }
+  }, [])
+
   // ── Stable memoization key ─────────────────────────────────────────────────
   // activeEvents gets a new array reference every RAF tick in timeline mode, but
   // the actual set of visible event IDs changes far less frequently.
@@ -142,16 +189,18 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
     })
   }, [activeEventKey, selectedId, events]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── HTML labels ───────────────────────────────────────────────────────────
+  // ── HTML labels + country flags ───────────────────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const htmlData = useMemo(() =>
-    activeEvents.map((ev) => ({
-      lat:   ev.origin.lat,
-      lng:   ev.origin.lng,
-      text:  ev.origin.label,
-      color: getTypeColor(ev.type),
+  const htmlData = useMemo(() => [
+    ...COUNTRY_FLAGS.map((f) => ({ ...f, isFlag: true })),
+    ...activeEvents.map((ev) => ({
+      lat:    ev.origin.lat,
+      lng:    ev.origin.lng,
+      text:   ev.origin.label,
+      color:  getTypeColor(ev.type),
+      isFlag: false,
     })),
-  [activeEventKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  ], [activeEventKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Interaction handlers (stable refs) ────────────────────────────────────
   const handlePointClick = useCallback((pt) => {
@@ -168,11 +217,16 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
 
   const htmlElement = useCallback((d) => {
     const el = document.createElement('div')
-    el.className     = 'event-label'
-    el.textContent   = d.text
-    el.style.color       = d.color
-    el.style.borderColor = `${d.color}88`
-    el.style.textShadow  = `0 0 6px ${d.color}`
+    if (d.isFlag) {
+      el.style.cssText = 'display:flex;flex-direction:column;align-items:center;pointer-events:none;gap:2px'
+      el.innerHTML = `<span style="font-size:22px;line-height:1;filter:drop-shadow(0 0 4px rgba(0,255,65,0.6))">${d.flag}</span><span style="font-size:9px;color:#00ff41;font-family:Courier New,monospace;text-shadow:0 0 5px #00ff41;background:rgba(0,8,0,0.75);padding:1px 4px;border:1px solid rgba(0,255,65,0.3)">${d.name}</span>`
+    } else {
+      el.className         = 'event-label'
+      el.textContent       = d.text
+      el.style.color       = d.color
+      el.style.borderColor = `${d.color}88`
+      el.style.textShadow  = `0 0 6px ${d.color}`
+    }
     return el
   }, [])
 
