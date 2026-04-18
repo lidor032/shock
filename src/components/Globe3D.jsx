@@ -361,6 +361,20 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   // Clean up cursor on unmount
   useEffect(() => () => { document.body.style.cursor = 'auto' }, [])
 
+  // Reset cursor when arcsData cycles (live mode swaps arcs every 3.5 s without
+  // firing a null hover event, leaving the cursor stuck as a pointer).
+  useEffect(() => {
+    document.body.style.cursor = 'auto'
+  }, [arcsData])
+
+  // ── Stable Globe prop callbacks ────────────────────────────────────────────
+  // Dep arrays are empty: these only touch document.body and datum fields that
+  // are stable string/primitive values — no component state or props involved.
+  const arcLabel     = useCallback((d) => d.event?.title, [])
+  const onArcHover   = useCallback((arc) => { document.body.style.cursor = arc ? 'pointer' : 'auto' }, [])
+  const pointLabel   = useCallback((d) => d.label, [])
+  const onPointHover = useCallback((pt) => { document.body.style.cursor = pt ? 'pointer' : 'auto' }, [])
+
   return (
     <div
       ref={containerRef}
@@ -392,9 +406,9 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
         arcDashLength="dl"
         arcDashGap="dg"
         arcDashAnimateTime="animTime"
-        arcLabel={(d) => d.event?.title}
+        arcLabel={arcLabel}
         onArcClick={handleArcClick}
-        onArcHover={(arc) => { document.body.style.cursor = arc ? 'pointer' : 'auto' }}
+        onArcHover={onArcHover}
 
         // ── Points ────────────────────────────────────────────────────────────
         pointsData={pointsData}
@@ -404,9 +418,9 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
         pointAltitude="altitude"
         pointRadius="size"
         pointsMerge={false}
-        pointLabel={(d) => d.label}
+        pointLabel={pointLabel}
         onPointClick={handlePointClick}
-        onPointHover={(pt) => { document.body.style.cursor = pt ? 'pointer' : 'auto' }}
+        onPointHover={onPointHover}
 
         // ── HTML labels ───────────────────────────────────────────────────────
         htmlElementsData={htmlData}

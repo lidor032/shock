@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import Globe3D          from './components/Globe3D'
 import Timeline         from './components/Timeline'
 import EventCard        from './components/EventCard'
@@ -10,6 +10,27 @@ import FullscreenToggle from './components/FullscreenToggle'
 import { events, campaigns } from './data/events'
 import { useSimulation } from './hooks/useSimulation'
 import { useNews }        from './hooks/useNews'
+
+class GlobeErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() { return { hasError: true } }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
+          <div className="text-center">
+            <div className="text-red-500 text-lg font-bold tracking-widest">GLOBE UNAVAILABLE</div>
+            <div className="text-green-700 text-xs mt-2">WebGL context lost — reload to recover</div>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 export default function App() {
   const [mode, setMode]              = useState('live')
@@ -66,12 +87,14 @@ export default function App() {
     <div className="relative w-screen h-screen bg-black overflow-hidden">
       {/* Full-screen Globe */}
       <div className="absolute inset-0 z-0">
-        <Globe3D
-          events={events}
-          activeEvents={activeEvents}
-          selectedEvent={selectedEvent}
-          onEventClick={handleEventClick}
-        />
+        <GlobeErrorBoundary>
+          <Globe3D
+            events={events}
+            activeEvents={activeEvents}
+            selectedEvent={selectedEvent}
+            onEventClick={handleEventClick}
+          />
+        </GlobeErrorBoundary>
       </div>
 
       <NewsFeed headlines={headlines} />
