@@ -2,9 +2,23 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import Globe from 'react-globe.gl'
 import { getTypeColor, getImportanceColor } from '../utils/colors'
 
-const INIT_LAT = 31
-const INIT_LNG  = 44
-const INIT_ALT  = 1.3
+const INIT_LAT = 31.5
+const INIT_LNG  = 35.0
+const INIT_ALT  = 2.0
+
+// ── Country flag markers (static, always visible) ────────────────────────────
+const FLAG_MARKERS = [
+  { lat: 31.5,  lng: 35.0,  country: 'IL', flag: '🇮🇱', label: 'Israel',       _type: 'flag' },
+  { lat: 32.0,  lng: 53.0,  country: 'IR', flag: '🇮🇷', label: 'Iran',         _type: 'flag' },
+  { lat: 33.8,  lng: 35.8,  country: 'LB', flag: '🇱🇧', label: 'Lebanon',      _type: 'flag' },
+  { lat: 31.5,  lng: 34.46, country: 'PS', flag: '🇵🇸', label: 'Gaza',         _type: 'flag' },
+  { lat: 15.5,  lng: 44.0,  country: 'YE', flag: '🇾🇪', label: 'Yemen',        _type: 'flag' },
+  { lat: 33.3,  lng: 44.4,  country: 'IQ', flag: '🇮🇶', label: 'Iraq',         _type: 'flag' },
+  { lat: 24.7,  lng: 46.7,  country: 'SA', flag: '🇸🇦', label: 'Saudi Arabia', _type: 'flag' },
+  { lat: 38.0,  lng: 32.0,  country: 'TR', flag: '🇹🇷', label: 'Turkey',       _type: 'flag' },
+  { lat: 30.0,  lng: 31.2,  country: 'EG', flag: '🇪🇬', label: 'Egypt',        _type: 'flag' },
+  { lat: 25.3,  lng: 55.3,  country: 'AE', flag: '🇦🇪', label: 'UAE',          _type: 'flag' },
+]
 
 // Types whose arcs hug the surface and move slowly (logistical routes, not strikes)
 const DEPLOYMENT_TYPES = new Set(['deployment', 'airlift'])
