@@ -34,6 +34,14 @@ All event-type-specific colors come from `src/utils/colors.js`. In JSX: inline `
 - 50: VideoModal
 - 9999: CRT scanline (body::after)
 
+## Component patterns established
+
+- `Header`, `Legend`, `NewsFeed` are all wrapped with `React.memo` — do not add redundant memoization inside them.
+- Header accepts `activeEvents` prop (the full array from `useSimulation`) and reads `.length` for the ACTIVE OPS chip. Never hardcode that count again.
+- `useNews()` destructures both `headlines` and `error` (aliased `newsError`) — `newsError` is passed to NewsFeed. If adding more hooks that can error, follow this pattern: destructure error, alias it, pass down as a named prop.
+- `NewsFeed` shows a `FEED ERR` badge inside the source label block when `newsError` is truthy. The badge sits after the "LIVE NEWS" text, inside the same `flex-shrink-0` left-side block.
+- `vercel.json` at project root rewrites all routes to `/index.html` for SPA routing — this file must not be removed or it will break deep-link navigation on Vercel.
+
 ## Globe configuration
 
 - `globeImageUrl`: earth-night.jpg (currently from unpkg CDN — should be self-hosted in public/textures/)
