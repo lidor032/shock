@@ -18,6 +18,7 @@ export const COUNTRY_COLORS = {
   [COUNTRIES.HEZBOLLAH]: '#cc6600',
   [COUNTRIES.HOUTHI]:    '#cc9900',
   [COUNTRIES.IRAQ_PMF]:  '#884400',
+  [COUNTRIES.HAMAS]:     '#1a8a1a',
 }
 
 export const IMPORTANCE_COLORS = {
