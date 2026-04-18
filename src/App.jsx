@@ -113,6 +113,8 @@ export default function App() {
 
       <Legend />
 
+      <FullscreenToggle />
+
       {/* Active arc count badge (live mode) */}
       {mode === 'live' && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 fade-in">
