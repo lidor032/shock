@@ -35,6 +35,7 @@ export default function FullscreenToggle() {
     <button
       onClick={toggle}
       className="fullscreen-toggle"
+      style={{ bottom: '20px', left: '20px', right: 'auto' }}
       title={isFullscreen ? 'Exit fullscreen [F]' : 'Enter fullscreen [F]'}
       aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
     >
