@@ -35,6 +35,7 @@ const LOC = {
   NEVATIM:        { lat: 31.2077,  lng: 35.0127,  label: 'Nevatim Air Base, Israel' },
   DIMONA:         { lat: 31.0748,  lng: 35.1536,  label: 'Dimona Nuclear Site' },
   RAMAT_DAVID:    { lat: 32.6651,  lng: 35.1795,  label: 'Ramat David Air Base' },
+  GAZA_CITY:      { lat: 31.5017,  lng: 34.4674,  label: 'Gaza City' },
   BEIRUT:         { lat: 33.8938,  lng: 35.5018,  label: 'Beirut, Lebanon' },
   SOUTHERN_LEB:   { lat: 33.2700,  lng: 35.2000,  label: 'South Lebanon' },
   DAMASCUS:       { lat: 33.5138,  lng: 36.2765,  label: 'Damascus, Syria' },
@@ -55,7 +56,7 @@ const LOC = {
 const ts = (dateStr) => new Date(dateStr).getTime()
 
 export const TIMELINE_START = ts('2023-10-07T06:30:00Z')
-export const TIMELINE_END   = ts('2026-04-17T00:00:00Z')
+export const TIMELINE_END   = ts('2026-04-18T23:59:59Z')
 
 export const campaigns = [
   { id: 'all',               name: 'Global Timeline (Iron Swords)',    start: TIMELINE_START,              end: TIMELINE_END },
@@ -699,6 +700,56 @@ export const events = [
     arcColor: ['#4499ff', '#aaccff'],
     simulated: true,
   },
-]
+
+  {
+    id: 29,
+    date: '2023-10-07',
+    timestamp: ts('2023-10-07'),
+    title: 'Hamas Launches Operation Al-Aqsa Flood — Oct 7 Attack',
+    subtitle: '~3,000 rockets fired; ground assault on 22 Israeli communities',
+    description: 'Hamas launched a large-scale coordinated assault from Gaza into southern Israel. Approximately 3,000 rockets were fired toward Israeli cities while ~3,000 Hamas fighters breached the border fence at multiple points, attacking 22 communities, kibbutzim, and the Nova music festival. Around 1,200 Israelis were killed and ~250 taken hostage into Gaza — the deadliest attack on Jews since the Holocaust.',
+    type: EVENT_TYPES.MISSILE,
+    importance: 'critical',
+    origin: LOC.GAZA_CITY,
+    targets: [
+      { lat: 31.4084, lng: 34.5647, label: 'Re\'im — Nova Festival Site' },
+      { lat: 31.3521, lng: 34.4594, label: 'Kibbutz Be\'eri' },
+      { lat: 31.3748, lng: 34.5071, label: 'Kibbutz Nir Oz' },
+      { lat: 31.8028, lng: 34.6542, label: 'Ashkelon' },
+    ],
+    country: COUNTRIES.HAMAS,
+    casualties: '~1,200 Israelis killed; ~250 taken hostage; ~3,500 wounded',
+    source: 'IDF, Reuters, BBC, AP',
+    searchQuery: 'Hamas October 7 attack Israel 2023',
+    tags: ['historic', 'Hamas', 'Oct7', 'hostages', 'ground-assault', 'rockets'],
+    arcAltitude: 0.08,
+    arcSpeed: 2000,
+    arcColor: ['#ff2222', '#ff6600'],
+  },
+
+  {
+    id: 30,
+    date: '2023-10-27',
+    timestamp: ts('2023-10-27'),
+    title: 'IDF Launches Ground Invasion of Gaza',
+    subtitle: 'Armored columns enter northern Gaza; largest IDF operation since 2006',
+    description: 'The Israel Defense Forces launched a large-scale ground invasion of the Gaza Strip, with armored columns and infantry crossing from northern Israel into Gaza City and Jabalia. The operation aimed to dismantle Hamas military infrastructure, destroy tunnel networks, and recover hostages. It was the largest IDF ground operation since the 2006 Lebanon war.',
+    type: EVENT_TYPES.GROUND,
+    importance: 'critical',
+    origin: { lat: 31.5248, lng: 34.5526, label: 'Israeli Border — Erez' },
+    targets: [
+      LOC.GAZA_CITY,
+      { lat: 31.5326, lng: 34.4836, label: 'Jabalia' },
+    ],
+    country: COUNTRIES.ISRAEL,
+    casualties: 'Ongoing — thousands of Palestinian casualties reported; IDF casualties sustained',
+    source: 'IDF, Reuters, AP, BBC',
+    searchQuery: 'IDF Gaza ground invasion October 27 2023',
+    tags: ['ground-invasion', 'Gaza', 'IDF', 'historic', 'armored'],
+    arcAltitude: 0.04,
+    arcSpeed: 6000,
+    arcColor: ['#0088ff', '#00ff41'],
+  },
+].sort((a, b) => a.timestamp - b.timestamp)
 
 export default events
