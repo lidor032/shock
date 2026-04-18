@@ -61,17 +61,32 @@ export default function VideoModal({ event, onClose }) {
           </div>
         </div>
 
-        {/* YouTube Embed */}
-        <div className="relative w-full flex-1 min-h-0" style={{ aspectRatio: '16/9', minHeight: 320 }}>
-          <iframe
-            key={event.id}
-            src={embedSrc}
-            title={event.title}
-            allowFullScreen
-            allow="autoplay; encrypted-media"
-            className="absolute inset-0 w-full h-full"
-            style={{ border: 'none', background: '#000' }}
-          />
+        {/* Video Search CTA */}
+        <div className="flex flex-col items-center justify-center py-16 px-8 gap-6" style={{ minHeight: 280 }}>
+          <div className="text-green-700 text-xs tracking-widest">OPEN-SOURCE FOOTAGE</div>
+          <a
+            href={ytSearchUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="px-8 py-4 rounded font-bold text-sm tracking-widest transition-all hover:scale-105"
+            style={{
+              background: `${typeColor}22`,
+              border: `1px solid ${typeColor}66`,
+              color: typeColor,
+              boxShadow: `0 0 20px ${typeColor}33`,
+              textShadow: `0 0 8px ${typeColor}`,
+            }}
+          >
+            SEARCH YOUTUBE FOR FOOTAGE ↗
+          </a>
+          <div className="text-green-800 text-xs text-center max-w-md">
+            {event.description}
+          </div>
+          {event.simulated && (
+            <div className="text-yellow-600 text-xs font-bold tracking-widest">
+              SIMULATED EVENT — NO REAL FOOTAGE
+            </div>
+          )}
         </div>
 
         {/* Footer */}
