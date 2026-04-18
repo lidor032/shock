@@ -1,1 +1,2 @@
-- [OSINT Globe — Project Context](project_osint_globe.md) — React+Vite globe app, 28 events, two modes (live/timeline), pre-Vercel deploy
+- [OSINT Globe — Project Context](../../../.claude/projects/-Users-lidor-Desktop-stam/memory/project_osint_globe.md) (shared project memory)
+- [QA findings — OSINT Globe codebase](project_qa_findings.md) — confirmed bugs, memory leak status, schema conventions, performance patterns
