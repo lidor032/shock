@@ -247,8 +247,16 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
     return el
   }, [])
 
+  // Clean up cursor on unmount
+  useEffect(() => () => { document.body.style.cursor = 'auto' }, [])
+
   return (
-    <div className="w-full h-full">
+    <div
+      ref={containerRef}
+      className="w-full h-full outline-none"
+      tabIndex={0}
+      onMouseDown={() => containerRef.current?.focus()}
+    >
       <Globe
         ref={globeRef}
         width={dims.w}
