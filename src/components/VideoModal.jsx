@@ -2,20 +2,19 @@ import { useEffect } from 'react'
 import { getTypeColor } from '../utils/colors'
 
 export default function VideoModal({ event, onClose }) {
-  if (!event) return null
+  const typeColor   = getTypeColor(event?.type)
+  const searchQuery = encodeURIComponent(event?.searchQuery ?? event?.title ?? '')
+  const ytSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery}`
 
   // Close on Escape key
   useEffect(() => {
+    if (!event) return
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  }, [onClose, event])
 
-  const typeColor   = getTypeColor(event.type)
-  // YouTube search embed — shows search results for the event inside the player
-  const searchQuery = encodeURIComponent(event.searchQuery ?? event.title)
-  const embedSrc    = `https://www.youtube.com/embed?listType=search&list=${searchQuery}&autoplay=1`
-  const ytSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery}`
+  if (!event) return null
 
   return (
     <div
