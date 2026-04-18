@@ -12,4 +12,10 @@ export default defineConfig({
       target: 'esnext',
     },
   },
+  resolve: {
+    alias: {
+      // Force the classic WebGL build — three-globe doesn't support the WebGPU entry yet
+      three: 'three/build/three.module.js',
+    },
+  },
 })
