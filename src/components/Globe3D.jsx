@@ -23,46 +23,88 @@ const FLAG_MARKERS = [
 // Types whose arcs hug the surface and move slowly (logistical routes, not strikes)
 const DEPLOYMENT_TYPES = new Set(['deployment', 'airlift'])
 
-// ── Dynamic arc altitude ───────────────────────────────────────────────────────
-// Compute a realistic atmospheric trajectory height from angular distance.
-// Deployment types override this with their own near-surface values.
-//
-// sqrt-scale keeps short-range strikes low and intercontinentals sub-orbital:
-//   ~2°  (Lebanon→Israel)    → 0.04-0.07
-//   ~14° (Iran→Israel)       → 0.19
-//   ~18° (Yemen→Israel)      → 0.21
-//   ~46° (Diego Garcia→Iran) → 0.28 (capped)
-function computeArcAlt(origin, target) {
-  if (!origin || !target) return 0.08
-  const midLat = ((origin.lat + target.lat) / 2) * (Math.PI / 180)
-  const dLat   = target.lat - origin.lat
-  const dLng   = (target.lng - origin.lng) * Math.cos(midLat)
-  const dist   = Math.sqrt(dLat * dLat + dLng * dLng)
-  return Math.min(0.28, Math.max(0.04, Math.sqrt(dist) * 0.05))
+// Naval arcs use a forced navy-blue gradient regardless of per-event arcColor
+const NAVAL_ARC_COLOR = ['#1E3A5F', '#4A90D9']
+
+// ── Haversine great-circle distance (km) ──────────────────────────────────────
+// Pure, module-scope — never instantiated inside a render loop.
+function calculateDistance(from, to) {
+  if (!from || !to) return 0
+  const R    = 6371
+  const dLat = (to.lat - from.lat) * Math.PI / 180
+  const dLng = (to.lng - from.lng) * Math.PI / 180
+  const a    = Math.sin(dLat / 2) ** 2
+            + Math.cos(from.lat * Math.PI / 180)
+            * Math.cos(to.lat  * Math.PI / 180)
+            * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// ── Type × distance altitude lookup table ─────────────────────────────────────
+// Buckets: short < 500 km  |  medium 500–2000 km  |  long > 2000 km
+const ARC_ALTITUDE_TABLE = {
+  missile:    { short: 0.4,  medium: 0.8,  long: 1.5  },
+  airstrike:  { short: 0.05, medium: 0.08, long: 0.12 },
+  drone:      { short: 0.03, medium: 0.05, long: 0.08 },
+  airlift:    { short: 0.08, medium: 0.12, long: 0.18 },
+  naval:      { short: 0.0,  medium: 0.0,  long: 0.0  },
+  defense:    { short: 0.3,  medium: 0.5,  long: 0.8  },
+  ground:     { short: 0.01, medium: 0.02, long: 0.03 },
+  deployment: { short: 0.06, medium: 0.1,  long: 0.15 },
+}
+
+/**
+ * Returns the arc altitude for a given event type and great-circle distance.
+ * Naval always returns 0 (sea-level track). Unknown types fall back to 0.08.
+ * Explicit per-event arcAltitude overrides are applied upstream in arcStyle().
+ * @param {string} type - event.type
+ * @param {number} km   - great-circle distance in kilometres
+ * @returns {number}
+ */
+function getArcAltitude(type, km) {
+  const row = ARC_ALTITUDE_TABLE[type]
+  if (!row) return 0.08
+  const bucket = km < 500 ? 'short' : km <= 2000 ? 'medium' : 'long'
+  return row[bucket]
 }
 
 // ── Per-arc style params ───────────────────────────────────────────────────────
 // Stored directly in the arc data object so <Globe> can use plain string accessors
 // (e.g. arcDashLength="dl"), keeping useMemo deps stable with no inline functions.
 function arcStyle(ev, target) {
+  const isNaval      = ev.type === 'naval'
   const isDeployment = DEPLOYMENT_TYPES.has(ev.type)
+  const km           = calculateDistance(ev.origin, target)
 
+  // ── Naval: sea-level ship track, wide dashes ───────────────────────────────
+  if (isNaval) {
+    return {
+      altitude: 0,
+      dl:       0.4,   // wide dashes — ship track feel
+      dg:       0.2,
+      animTime: ev.arcSpeed ?? 12000,
+      stroke:   2.2,
+    }
+  }
+
+  // ── Deployment (surface-hugging routes) and airlift (very low) ────────────
   if (isDeployment) {
     const isAirlift = ev.type === 'airlift'
     return {
-      // Flat surface route for naval; very low for airlift
-      altitude: isAirlift ? (ev.arcAltitude ?? 0.05) : (ev.arcAltitude ?? 0.002),
+      // Explicit per-event arcAltitude takes precedence over type×distance table
+      altitude: ev.arcAltitude ?? getArcAltitude(ev.type, km),
       // Multiple dashes visible simultaneously = convoy/route feel
       dl:       0.10,
       dg:       0.06,
-      // Very slow — 10–18s to traverse the full arc
       animTime: ev.arcSpeed ?? (isAirlift ? 9000 : 16000),
       stroke:   1.8,
     }
   }
 
+  // ── Strike arcs (missile, airstrike, drone, defense, ground) ──────────────
   return {
-    altitude: computeArcAlt(ev.origin, target),
+    // Explicit per-event arcAltitude takes precedence over type×distance table
+    altitude: ev.arcAltitude ?? getArcAltitude(ev.type, km),
     dl:       0.03,   // tiny dot racing along the path
     dg:       0.97,
     animTime: ev.arcSpeed ?? 1800,
@@ -81,6 +123,8 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   const containerRef = useRef()
   const keysDown = useRef(new Set())
   const rafKeyRef = useRef(null)
+  // Guard so the arc altitude debug log only fires once per arcsData recomputation
+  const arcLogFiredRef = useRef(false)
   const [dims, setDims] = useState({ w: window.innerWidth, h: window.innerHeight })
   const [ready, setReady] = useState(false)
 
@@ -174,18 +218,28 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   const activeEventKey = activeEvents.map((e) => e.id).sort().join(',')
   const selectedId     = selectedEvent?.id ?? null
 
-  // ── Arc data — combat strikes & deployments unified with per-arc style ─────
+  // ── Arc data — combat strikes, deployments, and naval tracks ──────────────
+  // Naval events receive the NAVAL_ARC_COLOR gradient and sea-level altitude
+  // regardless of any per-event arcColor override.
+  // All other style fields are baked via arcStyle() so Globe can use plain
+  // string accessors — keeping useMemo deps stable with no inline functions.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const arcsData = useMemo(() =>
-    activeEvents.flatMap((ev) =>
+  const arcsData = useMemo(() => {
+    arcLogFiredRef.current = false  // reset so log fires once per recomputation
+    const arcs = activeEvents.flatMap((ev) =>
       (ev.targets ?? []).map((target) => {
-        const style = arcStyle(ev, target)
+        const style    = arcStyle(ev, target)
+        const isNaval  = ev.type === 'naval'
         return {
           startLat: ev.origin.lat,
           startLng: ev.origin.lng,
           endLat:   target.lat,
           endLng:   target.lng,
-          color:    ev.arcColor ?? [getTypeColor(ev.type), getTypeColor(ev.type)],
+          // Naval gets a forced navy-blue gradient; all others use per-event
+          // arcColor if set, falling back to the type's canonical colour.
+          color:    isNaval
+                      ? NAVAL_ARC_COLOR
+                      : (ev.arcColor ?? [getTypeColor(ev.type), getTypeColor(ev.type)]),
           altitude: style.altitude,
           dl:       style.dl,
           dg:       style.dg,
@@ -194,8 +248,29 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
           event:    ev,
         }
       })
-    ),
-  [activeEventKey]) // eslint-disable-line react-hooks/exhaustive-deps
+    )
+
+    // Debug log — fires once per unique active-event set change (not every frame)
+    if (!arcLogFiredRef.current) {
+      arcLogFiredRef.current = true
+      console.group('[Globe3D] Arc altitude assignments')
+      arcs.forEach((arc) => {
+        const km = calculateDistance(
+          { lat: arc.startLat, lng: arc.startLng },
+          { lat: arc.endLat,   lng: arc.endLng   }
+        )
+        console.log(
+          `${arc.event.title} | type=${arc.event.type} | ${Math.round(km)} km` +
+          ` | bucket=${km < 500 ? 'short' : km <= 2000 ? 'medium' : 'long'}` +
+          ` | altitude=${arc.altitude}` +
+          (arc.event.arcAltitude != null ? ' (override)' : ' (table)')
+        )
+      })
+      console.groupEnd()
+    }
+
+    return arcs
+  }, [activeEventKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Point markers ─────────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
