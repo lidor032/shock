@@ -338,7 +338,162 @@ Events that need high altitudes (ballistic missiles: IDs 4, 5, 10, 20, 22) use e
 ---
 
 ## 3. UI Designer — Visual & UX
-[To be filled by UI agent]
+
+_Section written by UI Designer agent on 2026-04-18._
+
+---
+
+### Current Visual Design / Aesthetic
+
+The app commits fully to a **military HUD / CRT terminal aesthetic** and executes it with strong consistency. The design language is coherent across every component — dark backgrounds, neon green as the primary accent, monospace typography, glowing borders, and a global scanline overlay. This is not a superficial skin; it is structural to how the components are built.
+
+**Core palette in use:**
+
+| Role | Value | Usage |
+|---|---|---|
+| Primary accent | `#00ff41` | Text, borders, glow; dominant color |
+| Amber/Gold | `#ffb000` | Status labels, simulated event warnings |
+| Alert red | `#ff2222` / `#ff3333` | Missile arcs, critical events, LIVE indicator |
+| Blue | `#0088ff` | Airstrike arcs, US carrier status chip |
+| Background | `#000000` / `rgba(0,8,0,0.88)` | Pure black canvas; near-black for panels |
+| Dim green | `#003300` / `#557755` | Minor events, low-importance markers |
+
+**CRT / HUD effects implemented:**
+- `body::after` — repeating-linear-gradient scanline overlay at `z-index: 9999`; 8% opacity dark bands every 4px over the entire viewport including the globe.
+- `.glow` / `.glow-red` / `.glow-amber` / `.glow-blue` — text-shadow utilities creating neon bloom.
+- `.border-glow` — 1px green border + dual box-shadow (outer spread + inset) giving panels a lit-edge look.
+- `.mil-panel` — `rgba(0,8,0,0.88)` background + `backdrop-filter: blur(4px)`. The `(0,8,0)` tint is deliberate — near-black with a barely-perceptible green cast, more authentic than pure black.
+- Custom scrollbar — 4px wide, green-tinted thumb, black track.
+- Custom range input — removes native appearance, replaces thumb with a glowing green circle (`box-shadow: 0 0 6px var(--green)`).
+- `pulse-dot::after` — absolute-positioned ping animation for radar-dot pulse effects on active indicators.
+- `ticker-track` — 320s linear `translateX` CSS animation for the news ticker; pauses on hover.
+
+**Typography:**
+- Font stack: `'Courier New', Courier, monospace` set globally on `body` and extended in `tailwind.config.js` as `fontFamily.mono`.
+- Labels use `tracking-widest` or `tracking-wider` for HUD readability. Values use `font-bold` + glow for a two-tier visual hierarchy: dim label / bright value.
+- `tabular-nums` on the live clock prevents layout shift as digits increment.
+
+**Globe visual configuration:**
+- `globeImageUrl`: `earth-night.jpg` — NASA night-lights texture, dark and ideal for the black HUD theme.
+- `backgroundImageUrl`: `night-sky.png` — starfield, reinforces a tactical satellite-view framing.
+- `atmosphereColor`: `#00cc44` — green atmosphere matching the HUD palette. A deliberate departure from realistic blue.
+- `atmosphereAltitude`: 0.18 — modest glow ring, not overwhelming.
+- Initial POV: `{ lat: 31, lng: 44, altitude: 1.3 }` — centered on the Middle East theater at a close cinematic angle. Correct choice for the conflict geography.
+
+---
+
+### Layout Structure and Responsiveness
+
+The layout follows a **layered z-index stack** with the globe as the absolute background layer:
+
+| Z-index | Element | Position |
+|---|---|---|
+| 0 | Globe3D canvas | `absolute inset-0` |
+| 9999 | CRT scanline overlay | `fixed inset-0` via `body::after` |
+| 20 | NewsFeed ticker | `absolute top-[52px]` (below Header) |
+| 30 | Header | `absolute top-0 left-0 right-0` |
+| 30 | EventCard | `absolute right-4 top-28 bottom-20` |
+| 30 | Timeline panel | `absolute bottom-0 left-0 right-0` |
+| 30 | Legend | `absolute bottom-4 right-4` |
+| 40 | Campaign selector | `absolute top-20 right-4` (timeline mode only) |
+| 50 | VideoModal | `fixed inset-0` (modal overlay) |
+
+**Header layout:** Three-block flex row — left (title/clock), center (mode toggle), right (status chips). Uses `pointer-events-none` on the outer container with `pointer-events-auto` on interactive children, so globe mouse events pass through the transparent gaps between blocks. Correct technique for overlaid HUD panels on a WebGL canvas.
+
+**EventCard:** Fixed width `w-80` (320px), positioned `right-4 top-28 bottom-20`. Has `maxHeight: calc(100vh - 180px)` with `overflow-y-auto` on the scrollable body. Works on desktop; will overlap the globe entirely on narrow viewports — no responsive breakpoints exist.
+
+**Timeline panel:** Full-width bottom bar (~80px tall). The Legend at `bottom-4 right-4` and the Timeline both occupy the bottom edge region in timeline mode. On short viewports these can visually collide.
+
+**Responsiveness gaps:** The app is desktop-only by design. No Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) are used anywhere. On narrow viewports: EventCard (320px fixed) will collide with Header status chips, Timeline obscures Legend, and the campaign selector overlaps EventCard.
+
+---
+
+### CSS Architecture and Patterns
+
+**Two-tier styling approach:** Global utility classes in `index.css` handle the HUD-specific primitives (`.mil-panel`, `.glow`, `.border-glow`, `.event-label`, `.ticker-track`). Tailwind classes handle all layout, spacing, and color variants. This is a clean and maintainable separation.
+
+**CSS custom properties defined in `:root`:**
+```css
+--green: #00ff41
+--amber: #ffb000
+--red:   #ff3333
+--blue:  #0088ff
+--bg:    #000000
+```
+These are used within `index.css` but **not consistently consumed by JSX components**. Components reach for Tailwind color utilities (`text-green-400`, `bg-red-950`) or inline hex strings from `colors.js`. This creates a minor palette divergence: `--red` is `#ff3333`, but `TYPE_COLORS.missile.primary` and `IMPORTANCE_COLORS.critical` are `#ff2222`. Functionally similar but the split means a palette change requires edits in three places.
+
+**Inline styles for dynamic colors:** EventCard, VideoModal, Globe3D markers, and CTA buttons all use inline `style` props with colors derived from `colors.js`. This is necessary and correct — Tailwind cannot generate classes from runtime values. The `${typeColor}22` / `${typeColor}44` / `${typeColor}55` convention (appending 2-digit hex alpha) is used consistently throughout.
+
+**Tailwind theme extensions in `tailwind.config.js`:**
+- `military.*` color tokens (green, amber, red, blue, dim) — defined but underused; most components use standard `green-*`, `red-*`, `yellow-*` Tailwind variants instead.
+- `animation` extensions: `pulse-fast`, `scan`, `ticker`, `blink` — `scan` and `blink` appear unused in current components; `ticker` duplicates the CSS animation already defined in `index.css`.
+
+---
+
+### UI Components Inventory
+
+| Component | Visual role | Key styling patterns |
+|---|---|---|
+| `Header.jsx` | Top bar: title, clock, mode toggle, status chips | `mil-panel border-glow`; `ModeBtn` with active bottom-border indicator; `StatusChip` two-line label/value layout; `LiveClock` ticking at 1s |
+| `NewsFeed.jsx` | Scrolling news ticker below header | `ticker-track` CSS animation (320s linear); red `LIVE NEWS` badge with pulsing dot; hover pauses scroll |
+| `Globe3D.jsx` | WebGL globe canvas | react-globe.gl; night textures; green atmosphere; arc/point/label data layers; keyboard WASD/arrow nav; loading overlay |
+| `EventCard.jsx` | Right-side detail panel | `mil-panel` with `typeColor`-tinted borders/shadows; `MetaPill` + `FieldLabel` sub-components; scrollable body; type-colored CTA button |
+| `VideoModal.jsx` | Full-screen modal | `fixed inset-0` overlay; `typeColor`-tinted border/shadow; YouTube search CTA link; `fade-in` animation; Escape key to close |
+| `Timeline.jsx` | Bottom playback controls | Event dot markers on a scrubber track; animated playhead line; speed buttons (1×/5×/20×/100×); UTC timestamp display |
+| `Legend.jsx` | Bottom-right key panel | Collapsible with toggle; SVG arc swatches; three sections: strike type, deployments, actors |
+| Campaign selector | Top-right dropdown (timeline mode only) | Inline in `App.jsx`; raw `<select>` without `mil-panel`/`border-glow` treatment; visual inconsistency with all other panels |
+
+---
+
+### Concrete TODOs and Recommendations
+
+#### High Priority — Correctness and Visual Fidelity
+
+1. **Wire Header status chips to live data.** "ACTIVE OPS: 3" is hardcoded. Pass `activeEvents` as a prop to Header and compute `activeEvents.length` dynamically. For "IRAN THREAT: CRITICAL" and "US CARRIERS: 2", either derive from event data or label them "INTEL ESTIMATE" to avoid presenting static strings as live intelligence.
+   - File: `src/components/Header.jsx:35-37`
+
+2. **Unify the red palette value.** `--red` in `index.css` is `#ff3333`; `military.red` in Tailwind config is `#ff2222`; `IMPORTANCE_COLORS.critical` and `TYPE_COLORS.missile.primary` are `#ff2222`. Pick one canonical alert red and use it in all three places. Green and amber are already consistent — red is the only divergence.
+
+3. **Self-host globe textures.** Copy `earth-night.jpg` and `night-sky.png` into `public/textures/` and reference as `/textures/earth-night.jpg`. Eliminates the `unpkg.com` CDN dependency and prevents a blank sphere when offline.
+   - File: `src/components/Globe3D.jsx:265-266`
+
+4. **Fix ticker animation duration for variable content length.** The animation is hardcoded to 320s. If the headline count changes (live API vs 20 static items), the content width changes but the duration stays fixed, making scroll speed inconsistent. Calculate duration in JS as `headlines.length * 16` (seconds) or set it via an inline CSS variable.
+   - File: `src/components/NewsFeed.jsx`, `src/index.css:104-108`
+
+#### Medium Priority — Polish and UX
+
+5. **Add a fullscreen toggle button.** The HTML5 Fullscreen API (`document.documentElement.requestFullscreen()`) is not implemented. Add a small HUD control that toggles fullscreen, styled as a `mil-panel border-glow` button. Standard for immersive visualization apps.
+
+6. **Add Timeline event dot tooltips on hover.** Currently hovering a dot shows nothing — you must click to see details. The `title={ev.title}` attribute is already present (native browser tooltip), but it inherits default browser styling. Add a CSS or React hover tooltip matching the HUD aesthetic. This dramatically improves timeline navigability without requiring a click.
+
+7. **Style the campaign selector consistently.** The `<select>` element in `App.jsx` lacks the `mil-panel border-glow` treatment used by every other panel. Wrap it in a `mil-panel border-glow` container or replace the native `<select>` with a custom dropdown built from `<button>` elements for full style control.
+   - File: `src/App.jsx:82-94`
+
+8. **Add a keyboard navigation hint.** The globe supports WASD + Arrow + +/- navigation but there is no visible indicator. Add a small dim label near the bottom-center badge or inside the Legend: `[WASD · ARROWS · +/-]`. This feature is invisible to first-time users.
+
+9. **Add the event type icon to VideoModal header.** `VideoModal.jsx` omits `getTypeIcon(event.type)` in its header while `EventCard.jsx` shows it prominently. The icon is a fast visual signal for event type and takes one line to add. Align both components.
+   - File: `src/components/VideoModal.jsx:39-45`
+
+10. **Verify EventCard bottom clearance in timeline mode.** EventCard is `bottom-20` (80px) and Timeline is ~80px tall. On short viewports the card footer's CTA button can be obscured by the Timeline bar. Increase to `bottom-24` or adjust dynamically based on active mode.
+    - File: `src/components/EventCard.jsx:13`
+
+#### Low Priority — Future Enhancements
+
+11. **Add a layer toggle control panel.** As event count grows, visual density on the globe will increase. A collapsible panel with per-type and per-actor toggles would let users reduce clutter. Implement as a `layerFilters` state object in `App.jsx` passed to Globe3D to pre-filter `activeEvents`.
+
+12. **Animate status chip value transitions.** When "ACTIVE OPS" count changes during timeline playback, the number flips instantly. A brief `fade-in` transition would make state changes feel more kinetic.
+
+13. **Apply beveled corners to EventCard and Legend.** Current panels use standard `rounded` corners. A `clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%)` beveled top-right corner would deepen the tactical aesthetic with minimal code.
+
+14. **Clean up unused Tailwind animation definitions.** `scan` and `blink` in `tailwind.config.js` are not referenced in any component. `ticker` duplicates the animation in `index.css`. Remove unused entries or use them: `scan` suits the Globe3D loading overlay; `blink` suits the LIVE mode indicator.
+
+---
+
+### Visual Quality Assessment Summary
+
+**Strengths:** The HUD aesthetic is mature, internally consistent, and correctly implemented. The color system, typography, CRT effects, and panel primitives cohere. The globe night texture + green atmosphere is visually distinctive. The `.mil-panel` + `.border-glow` pattern is a solid design system primitive used consistently across Header, EventCard, Timeline, Legend, and the active operations badge.
+
+**Weakest areas:** The campaign selector `<select>` breaks the visual system. Header status chips present stale data as live intelligence. No fullscreen toggle exists. The `scan` and `blink` animations are defined but unused. There are no responsive breakpoints — the layout is desktop-only with no fallback. The red palette value diverges across three files.
 
 ---
 
