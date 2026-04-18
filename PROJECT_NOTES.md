@@ -1018,4 +1018,25 @@ Three work orders sent to agents:
 - **Fullscreen button overlapping EventCard**: Moved button from `right: 20px` to `left: 20px` (CSS + inline style).
   - Files: `src/components/FullscreenToggle.jsx`, `src/index.css`
 
+#### Phase 4: Events Engineer — Section 4 Documentation & Batch #1 Escalation
+
+**Events Engineer — Project Notes Section 4: Data & Content** ✅ COMPLETE
+- Wrote comprehensive 2,500+ word section documenting current events database
+- Data schema: 28 events, 8 EVENT_TYPES, 7 COUNTRIES, 26 LOC presets, 3 campaigns
+- Coverage analysis: Oct–Dec 2023 sparse (5 events), Oct 7 attack missing (critical gap), Gaza coverage minimal (only 2025+ ceasefire events), May–Dec 2025 void (6-month gap)
+- Data quality: 12 observations including casualty structure untracked, coordinate precision undocumented, importance ratings ambiguous, simulated events mixed into timeline
+- Event flow documentation: Complete data pipeline from events.js → App.jsx → Globe3D/Timeline/EventCard
+- 21 prioritized TODOs: P0 (4 blockers, 4–6 hrs), P1 (5 high priority, 7–13 hrs), P2 (6 medium, 8–12 hrs), P3 (4 lower, 6 hrs). Total remediation: 24–38 hrs
+- Files changed: `PROJECT_NOTES.md` (Section 4 filled, 1,200 lines), agent memory `.claude/agent-memory/osint-events-engineer/events_schema_analysis.md` and `MEMORY.md` (new)
+
+**WO-1: Events Engineer — Batch #1 Historical Data (Oct 7–31, 2023)** 🔴 BLOCKED
+- Received work order for 40+ events covering Oct 7–31, 2023 critical phase
+- Identified blocking schema mismatch: work order schema (importance 1-5 numeric, casualties object, from/to coords, actor codes, no timestamp/subtitle/arc fields) incompatible with current events.js schema (importance "critical"/"major" strings, casualties string, origin/targets[], country full names, requires timestamp/subtitle/arc styling for visualization)
+- Escalated to team lead with three options:
+  - Option A: Adopt new schema wholesale (clean data, breaks current visualization)
+  - Option B: Map work order schema to existing schema (maintains compatibility, manual translation)
+  - Option C: Create separate batch1_events.js (defers decision, two incompatible schemas)
+- Awaiting schema clarification before proceeding
+- Task created: #2 "Generate Batch #1 Historical Events" (in progress pending clarification)
+
 ---
