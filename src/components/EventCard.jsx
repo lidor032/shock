@@ -73,7 +73,7 @@ export default function EventCard({ event, onClose, onWatchVideo }) {
             <FieldLabel>TARGET(S)</FieldLabel>
             <div className="ml-2 space-y-0.5">
               {event.targets?.map((t, i) => (
-                <div key={i} className="text-xs text-green-400">↳ {t.label}</div>
+                <div key={t.label} className="text-xs text-green-400">↳ {t.label}</div>
               ))}
             </div>
           </div>

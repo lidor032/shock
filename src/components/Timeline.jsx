@@ -14,7 +14,7 @@ export default function Timeline({
   onEventClick,
 }) {
   const totalDuration  = endTime - startTime
-  const progress       = Math.max(0, Math.min(1, (currentTime - startTime) / totalDuration))
+  const progress       = totalDuration > 0 ? Math.max(0, Math.min(1, (currentTime - startTime) / totalDuration)) : 0
   const sliderValue    = Math.round(progress * 1000)
 
   const handleScrub = (e) => {
