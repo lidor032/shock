@@ -54,10 +54,10 @@ const LOC = {
 const ts = (dateStr) => new Date(dateStr).getTime()
 
 export const TIMELINE_START = ts('2023-10-07T06:30:00Z')
-export const TIMELINE_END   = ts('2026-04-17T00:00:00Z')
+export const TIMELINE_END   = ts('2027-01-01T00:00:00Z')
 
 export const campaigns = [
-  { id: 'all',               name: 'Global Timeline (Iron Swords)',    start: TIMELINE_START,              end: TIMELINE_END },
+  { id: 'all',               name: 'Global Timeline (Iron Swords)',    start: TIMELINE_START,              end: ts('2027-01-01T00:00:00Z') },
   { id: 'days-of-repentance',name: 'Operation Days of Repentance',     start: ts('2024-10-20T00:00:00Z'),  end: ts('2024-10-30T00:00:00Z') },
   { id: 'northern-arrows',   name: 'Northern Arrows',                  start: ts('2024-09-15T00:00:00Z'),  end: ts('2024-11-30T00:00:00Z') },
 ]

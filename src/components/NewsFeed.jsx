@@ -16,7 +16,7 @@ export default function NewsFeed({ headlines }) {
       <div className="flex-1 overflow-hidden h-7 flex items-center">
         <div className="ticker-track flex gap-0">
           {items.map((h, i) => (
-            <span key={i} className="inline-flex items-center text-xs text-green-300 mr-10">
+            <span key={`${i < headlines.length ? 'a' : 'b'}-${i}`} className="inline-flex items-center text-xs text-green-300 mr-10">
               <span className="text-yellow-500 mr-2 font-bold">[{h.source}]</span>
               <a
                 href={h.url !== '#' ? h.url : undefined}

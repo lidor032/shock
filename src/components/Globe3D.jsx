@@ -68,6 +68,10 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   }, [])
 
   useEffect(() => {
+    return () => { document.body.style.cursor = 'auto' }
+  }, [])
+
+  useEffect(() => {
     if (!globeRef.current) return
     const timer = setTimeout(() => {
       globeRef.current.pointOfView({ lat: INIT_LAT, lng: INIT_LNG, altitude: INIT_ALT }, 1500)
@@ -81,7 +85,10 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   // the actual set of visible event IDs changes far less frequently.
   // Keying on the sorted ID string prevents Globe's three useMemo calls from
   // re-running on every single animation frame.
-  const activeEventKey = activeEvents.map((e) => e.id).sort().join(',')
+  const activeEventKey = useMemo(
+    () => activeEvents.map((e) => e.id).sort().join(','),
+    [activeEvents],
+  )
   const selectedId     = selectedEvent?.id ?? null
 
   // ── Arc data — combat strikes & deployments unified with per-arc style ─────

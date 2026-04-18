@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react'
-import Globe3D     from './components/Globe3D'
+import Globe3D       from './components/Globe3D'
+import ErrorBoundary from './components/ErrorBoundary'
 import Timeline    from './components/Timeline'
 import EventCard   from './components/EventCard'
 import VideoModal  from './components/VideoModal'
@@ -65,12 +66,14 @@ export default function App() {
     <div className="relative w-screen h-screen bg-black overflow-hidden">
       {/* Full-screen Globe */}
       <div className="absolute inset-0 z-0">
-        <Globe3D
-          events={events}
-          activeEvents={activeEvents}
-          selectedEvent={selectedEvent}
-          onEventClick={handleEventClick}
-        />
+        <ErrorBoundary>
+          <Globe3D
+            events={events}
+            activeEvents={activeEvents}
+            selectedEvent={selectedEvent}
+            onEventClick={handleEventClick}
+          />
+        </ErrorBoundary>
       </div>
 
       <NewsFeed headlines={headlines} />

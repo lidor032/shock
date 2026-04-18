@@ -18,6 +18,15 @@ export function useSimulation({
   const rafRef         = useRef(null)
   const lastRealTsRef  = useRef(null)
 
+  // Keep refs current so the RAF tick always uses the latest campaign bounds
+  // without needing to restart the animation loop on every campaign switch.
+  const startTimeRef = useRef(startTime)
+  const endTimeRef   = useRef(endTime)
+  const speedRef     = useRef(speed)
+  useEffect(() => { startTimeRef.current = startTime }, [startTime])
+  useEffect(() => { endTimeRef.current   = endTime   }, [endTime])
+  useEffect(() => { speedRef.current     = speed     }, [speed])
+
   // ── TIMELINE PLAYBACK ──────────────────────────────────────────────────────
   useEffect(() => {
     if (mode !== 'timeline' || !isPlaying) {
@@ -29,11 +38,10 @@ export function useSimulation({
     const tick = (realTs) => {
       if (lastRealTsRef.current !== null) {
         const realDelta = realTs - lastRealTsRef.current
-        const gameDelta = realDelta * MS_PER_REAL_MS_AT_1X * speed
+        const gameDelta = realDelta * MS_PER_REAL_MS_AT_1X * speedRef.current
         setCurrentTime((prev) => {
           const next = prev + gameDelta
-          // Loop back to campaign start (not global start) when reaching campaign end
-          return next >= endTime ? startTime : next
+          return next >= endTimeRef.current ? startTimeRef.current : next
         })
       }
       lastRealTsRef.current = realTs
@@ -45,7 +53,7 @@ export function useSimulation({
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       lastRealTsRef.current = null
     }
-  }, [mode, isPlaying, speed, startTime, endTime, setCurrentTime])
+  }, [mode, isPlaying, setCurrentTime])
 
   // ── TIMELINE ACTIVE EVENTS — stable reference ──────────────────────────────
   // Filter every frame but only return a new array reference when the set of

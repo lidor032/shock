@@ -2,19 +2,18 @@ import { useEffect } from 'react'
 import { getTypeColor } from '../utils/colors'
 
 export default function VideoModal({ event, onClose }) {
-  if (!event) return null
-
-  // Close on Escape key
+  // Must be called unconditionally (Rules of Hooks)
   useEffect(() => {
+    if (!event) return
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  }, [event, onClose])
+
+  if (!event) return null
 
   const typeColor   = getTypeColor(event.type)
-  // YouTube search embed — shows search results for the event inside the player
   const searchQuery = encodeURIComponent(event.searchQuery ?? event.title)
-  const embedSrc    = `https://www.youtube.com/embed?listType=search&list=${searchQuery}&autoplay=1`
   const ytSearchUrl = `https://www.youtube.com/results?search_query=${searchQuery}`
 
   return (
@@ -44,35 +43,44 @@ export default function VideoModal({ event, onClose }) {
             </div>
             <div className="text-xs text-green-400">{event.subtitle}</div>
           </div>
-          <div className="flex items-center gap-3">
-            <a
-              href={ytSearchUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-green-600 hover:text-green-300 underline"
-            >
-              Open in YouTube ↗
-            </a>
-            <button
-              onClick={onClose}
-              className="text-green-600 hover:text-green-200 text-2xl leading-none"
-            >
-              ×
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="text-green-600 hover:text-green-200 text-2xl leading-none"
+          >
+            ×
+          </button>
         </div>
 
-        {/* YouTube Embed */}
-        <div className="relative w-full flex-1 min-h-0" style={{ aspectRatio: '16/9', minHeight: 320 }}>
-          <iframe
-            key={event.id}
-            src={embedSrc}
-            title={event.title}
-            allowFullScreen
-            allow="autoplay; encrypted-media"
-            className="absolute inset-0 w-full h-full"
-            style={{ border: 'none', background: '#000' }}
-          />
+        {/* YouTube search CTA */}
+        <div
+          className="flex-1 flex flex-col items-center justify-center gap-6 px-8 py-12"
+          style={{ minHeight: 260 }}
+        >
+          <div className="text-center">
+            <div className="text-green-700 text-xs tracking-widest mb-2">OPEN SOURCE FOOTAGE</div>
+            <div className="text-green-400 text-sm max-w-md leading-relaxed">
+              {event.description?.slice(0, 140)}…
+            </div>
+          </div>
+          <a
+            href={ytSearchUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-3 px-6 py-3 rounded border transition-all"
+            style={{
+              borderColor: `${typeColor}88`,
+              color: typeColor,
+              background: `${typeColor}11`,
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/>
+            </svg>
+            <span className="text-sm font-bold tracking-wider">Search on YouTube ↗</span>
+          </a>
+          <div className="text-green-800 text-xs">
+            Query: {event.searchQuery ?? event.title}
+          </div>
         </div>
 
         {/* Footer */}
