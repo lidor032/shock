@@ -1,0 +1,1 @@
+- [OSINT Globe — Project Context](project_osint_globe.md) — React+Vite globe app, 28 events, two modes (live/timeline), pre-Vercel deploy
