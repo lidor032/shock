@@ -16,7 +16,7 @@ export default function App() {
   const [selectedEvent, setSelected] = useState(null)
   const [showVideo, setShowVideo]    = useState(false)
   const [isPlaying, setIsPlaying]    = useState(true)
-  const [speed, setSpeed]            = useState(5)
+  const [speed, setSpeed]            = useState(1)
 
   // ── Campaign selector ──────────────────────────────────────────────────────
   const [activeCampaignId, setActiveCampaignId] = useState('all')
