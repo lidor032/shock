@@ -19,6 +19,7 @@ export const COUNTRIES = {
   HEZBOLLAH:'Hezbollah',
   HOUTHI:   'Houthi',
   IRAQ_PMF: 'Iraq PMF',
+  HAMAS:    'Hamas (Terror Org)',
 }
 
 // Geographic locations (lat/lng)
