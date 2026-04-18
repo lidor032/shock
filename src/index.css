@@ -154,3 +154,49 @@ input[type='range']::-webkit-slider-thumb {
 .fade-in {
   animation: fadeIn 0.3s ease forwards;
 }
+
+/* Fullscreen toggle button */
+.fullscreen-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  color: #00ff41;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.fullscreen-toggle:hover {
+  background: rgba(0, 255, 65, 0.12);
+  border-color: rgba(0, 255, 65, 0.6);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+}
+
+/* Country flag markers on globe */
+.flag-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(-20px);
+  pointer-events: none;
+}
+.flag-emoji {
+  font-size: 20px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+  line-height: 1;
+}
+.flag-label {
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.6);
+  margin-top: 2px;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
