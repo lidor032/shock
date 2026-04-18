@@ -720,6 +720,240 @@ _Section written by Events Engineer agent on 2026-04-18._
 ---
 
 ## 5. QA & Performance Analyst — Quality & Testing
-[To be filled by QA agent]
+
+_Section written by QA & Performance Analyst agent on 2026-04-18._
+
+### Overall Verdict: CONDITIONAL PASS with Critical Gaps
+
+The core rendering pipeline and simulation loop are well-engineered for their current scale. No crashes found in static analysis. However, zero test coverage, several silent failure modes, and unguarded null/undefined paths mean any data expansion or edge-case interaction could silently corrupt the UI. Safe to demo; not safe to publish without the P0 fixes below.
+
+---
+
+### Code Quality Observations
+
+#### Hooks — Findings
+
+**useSimulation.js — well-designed, one latent fragility**
+
+The RAF playback loop correctly cancels `rafRef.current` and resets `lastRealTsRef.current` in its cleanup. The `stableKeyRef` + `stableActiveRef` pattern (lines 54–66) is the right design: it decouples the RAF tick rate (~60fps) from React re-renders by only returning a new array reference when the visible event ID set actually changes.
+
+Latent fragility: `setCurrentTime` appears in the `useEffect` dependency array (line 48). It is stable by React contract and harmless today. If App.jsx is ever refactored to pass a non-stable wrapped callback, the RAF loop would restart mid-play, resetting `lastRealTsRef.current` to null and causing a single-frame timeline jump.
+
+**useNews.js — error state orphaned at call site**
+
+Interval polling has a correct `clearInterval` cleanup. Error handling exists (lines 35–37) but `error` is discarded at the call site — `App.jsx:49` only destructures `{ headlines }`. Any network failure is silently swallowed; the ticker continues showing stale fallback content with no user indication.
+
+Additionally, the fetch at line 22 does not check `res.ok` before calling `.json()`. A 429 or 401 response from NewsAPI returns JSON, so it won't throw — it is only caught by the `data.status === 'ok'` check at line 25. A non-JSON error response (e.g., nginx 502) will throw in `.json()` and be silently swallowed by the catch block.
+
+**Globe3D.jsx — keyboard nav cleanup correct; one cursor leak**
+
+The keyboard RAF loop (`rafKeyRef`) is cancelled both in `onKeyUp` (when keysDown empties) and in the `useEffect` cleanup (line 146). Double-safe and correct.
+
+Cursor defect: `onArcHover` and `onPointHover` (lines 285, 297) set `document.body.style.cursor` directly. In live mode, `setLiveActive` cycles arc data every 3500ms. When an arc is removed from `arcsData` while the user is hovering it, react-globe.gl does not guarantee a null hover event fires for the removed arc. The cursor can get stuck as `pointer`. This is a reproducible cosmetic defect in live mode.
+
+**VideoModal.jsx — Escape key listener: clean.** Correct dependency array; no leak.
+
+**Header.jsx — LiveClock interval: clean.** `clearInterval` in cleanup at line 81.
+
+#### Null / Undefined Guard Analysis (Zero Assumption Rule)
+
+Unguarded paths found:
+
+1. **`computeArcAlt()` — NaN propagation** (`Globe3D.jsx:22`): Guards against a null `origin` or `target` object (returns `0.08`) but does NOT guard against `origin.lat` being `undefined` or `NaN`. If any event has a missing numeric field, `Math.sqrt(NaN)` returns `NaN`, the arc altitude prop becomes `NaN`, and react-globe.gl renders the arc at an undefined height silently. No current events trigger this; no schema validation prevents it.
+
+2. **`Timeline.jsx:17` — division by zero**: `totalDuration = endTime - startTime`. If a campaign had `start === end`, `progress = 0/0 = NaN`, `sliderValue = Math.round(NaN) = NaN`, and `<input type="range" value={NaN}>` renders a broken scrubber. No current campaign has zero duration but there is no guard.
+
+3. **`Globe3D.jsx:155` — `activeEventKey` without memo**: `activeEvents.map((e) => e.id).sort().join(',')` runs on every Globe3D render inline. If any event is missing `id`, the key string contains `"undefined"`. The three `useMemo` blocks would appear stable (same key) while data is actually corrupt — a future event added without an `id` silently breaks memoization.
+
+4. **`EventCard.jsx:75` — `key={i}` on targets**: Index-based key. Use `key={t.label}` or `key={t.lat + '-' + t.lng}`.
+
+5. **`NewsFeed.jsx:19` — `key={i}` on duplicated ticker items**: Items are rendered as `[...headlines, ...headlines]` (40 items, keys 0–39). When `headlines` updates from the API, React diffs by position, causing incorrect reconciliation of scrolling items. Use `key={h.title + '-' + i}`.
+
+#### Error Handling
+
+No error boundaries exist anywhere. A WebGL context loss, CDN texture 404, or react-globe.gl internal error in Globe3D propagates uncaught and blanks the entire app. This is the single highest-risk reliability gap.
+
+---
+
+### Performance Concerns
+
+#### Re-render Frequency
+
+In timeline mode, `setCurrentTime` fires at ~60fps from `useSimulation.js`. This cascades:
+
+- `App.jsx` re-renders at ~60fps
+- `Globe3D` re-renders at ~60fps (new `activeEvents` prop reference each frame before `stableKeyRef` stabilizes it)
+- The three `useMemo` blocks in Globe3D do NOT re-fire (they key on `activeEventKey` which is stable between genuine event-set changes) — this is correctly designed
+- `Timeline.jsx` re-renders at ~60fps — `visibleEvents` filter recomputes every frame
+- **`Header`, `Legend`, `NewsFeed`, `EventCard` all re-render at ~60fps despite having no dependency on `currentTime`**
+
+Wrapping `Header`, `Legend`, `NewsFeed`, and `EventCard` in `React.memo` would eliminate their 60fps re-renders. At current scale (simple DOM components) this is not measurable, but is the right pre-emptive hygiene.
+
+Four inline function props on `<Globe>` (lines 283–297) — `arcLabel`, `onArcHover`, `pointLabel`, `onPointHover` — are recreated every render because they are not wrapped in `useCallback`. In timeline mode this means react-globe.gl receives new prop references at 60fps for these handlers.
+
+#### Memory Leak Audit
+
+| Component / Hook | Resource | Status |
+|---|---|---|
+| Globe3D.jsx | `resize` listener on `window` | CLEAN — removed in useEffect cleanup |
+| Globe3D.jsx | Keyboard nav RAF (`rafKeyRef`) | CLEAN — cancelled in cleanup and in onKeyUp |
+| Globe3D.jsx | Globe init `setTimeout` | CLEAN — cleared in cleanup |
+| Globe3D.jsx | Cursor state on live arc cycle | DEFECT — cursor may stick as `pointer` |
+| Header.jsx | LiveClock `setInterval` | CLEAN — cleared in cleanup |
+| useSimulation.js | Timeline RAF loop | CLEAN — cancelled in cleanup |
+| useSimulation.js | Live mode `setInterval` | CLEAN — cleared in cleanup |
+| useNews.js | News polling `setInterval` | CLEAN — cleared in cleanup |
+| VideoModal.jsx | Escape key `window` listener | CLEAN — removed in cleanup |
+
+One confirmed defect: cursor-stuck-as-pointer bug in live mode (detailed above).
+
+#### Dataset Scale Projections
+
+At 28 events, worst case ~40 arc objects in `arcsData` — no performance concern. If the dataset grows to 200–500 events, the 12-hour `ARC_VISIBLE_WINDOW` could produce 50–150 simultaneous arcs. react-globe.gl renders arcs as individual Three.js `Line2` objects (one draw call each, no geometry instancing). At 150 arcs, framerate degradation on integrated graphics is likely. This should be profiled before publishing a significantly expanded dataset.
+
+---
+
+### Testing Status
+
+**Current status: Zero test coverage.**
+
+Confirmed: no test files, no `vitest.config.js`, no `jest.config.js`, no `*.test.*` or `*.spec.*` files anywhere. No `vitest`, `jest`, `@testing-library/react`, or `@testing-library/jest-dom` in `package.json`.
+
+#### Tests That Must Be Written (Priority Ordered)
+
+**P0 — Events schema validation** (protects against silent data corruption)
+
+Every consumer of `events.js` accesses fields without runtime checks. A single malformed event causes silent rendering failures.
+
+```
+describe('events data schema')
+  - every event has id (number), no duplicate IDs
+  - every event has timestamp (finite number), title (non-empty string)
+  - every event has type matching a valid EVENT_TYPES value
+  - every event has origin with lat, lng (finite numbers), label (non-empty string)
+  - every event has targets (array, length >= 1), each target has lat, lng (finite), label (string)
+  - every event with arcColor has arcColor as 2-element array of strings
+  - events array is sorted by timestamp ascending
+  - simulated events have simulated: true
+```
+
+**P0 — Color utility guards**
+
+```
+describe('getTypeColor')
+  - returns valid hex string for all EVENT_TYPES values
+  - returns fallback '#00ff41' for unknown type string
+  - does not throw on undefined input
+
+describe('getImportanceColor')
+  - returns value for 'critical', 'major', 'moderate', 'minor'
+  - returns fallback for unknown string; does not throw on undefined
+```
+
+**P1 — useSimulation hook**
+
+```
+describe('useSimulation timeline mode')
+  - activeEvents contains only events in [currentTime - 12h, currentTime]
+  - activeEvents is empty when currentTime is before earliest event
+  - returns stable array reference across renders when event set unchanged
+  - time wraps to startTime when next value would exceed endTime
+
+describe('useSimulation live mode')
+  - starts with 3 active events
+  - cycles events at LIVE_CYCLE_INTERVAL
+  - avoids picking same event consecutively when pool is large enough
+```
+
+**P1 — Timeline component**
+
+```
+describe('Timeline')
+  - sliderValue is 0 when currentTime === startTime
+  - sliderValue is 1000 when currentTime === endTime
+  - sliderValue is clamped to [0, 1000] when currentTime is out of range
+  - handles endTime === startTime without NaN (zero-duration guard)
+  - visibleEvents filters to only events within [startTime, endTime]
+  - scrub calls onTimeChange with correct calculated timestamp
+```
+
+**P2 — App integration smoke tests**
+
+```
+describe('App integration')
+  - renders without crash with full events dataset (mock Globe3D — no WebGL in jsdom)
+  - LIVE/TIMELINE toggle switches mode and clears selectedEvent
+  - selecting an event shows EventCard; closing it clears selectedEvent
+  - campaign selector change resets currentTime to campaign.start
+```
+
+#### Recommended Test Setup
+
+Add to `package.json` devDependencies: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`.
+
+Minimal `vitest.config.js`:
+```js
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+export default defineConfig({ plugins: [react()], test: { environment: 'jsdom', globals: true } })
+```
+
+Globe3D.jsx cannot be unit tested in jsdom (Three.js needs real WebGL). Mock it in App integration tests:
+```js
+vi.mock('./components/Globe3D', () => ({ default: () => <div data-testid="globe-mock" /> }))
+```
+
+---
+
+### Browser Compatibility Concerns
+
+1. **`esnext` build target** (`vite.config.js`): Disables transpilation. App fails to parse in Chrome < 94, Firefox < 93, Safari < 15.4. Lower to `es2020` if older browser support is needed.
+
+2. **WebGL requirement**: No capability check or user-facing error exists. Users with WebGL disabled (common in some corporate environments) see a blank screen.
+
+3. **`backdrop-filter: blur(4px)` in VideoModal**: Not supported in Firefox < 103 without a flag. Modal background renders as opaque black in older Firefox.
+
+4. **CSS ticker animation on Safari iOS**: The `.ticker-track` scroll animation should use `transform: translateX()` with `will-change: transform` for GPU compositor promotion. Without it, Mobile Safari may drop frames when the globe is simultaneously rendering WebGL. Verify `src/index.css`.
+
+5. **`outline-none` on Globe3D div**: The `tabIndex={0}` container removes all focus indicators. This fails WCAG 2.4.7 (Focus Visible). Replace with `focus-visible:outline-2 focus-visible:outline-green-500` (Tailwind).
+
+---
+
+### Concrete TODO List (QA-owned)
+
+| Priority | Task | File | Details |
+|---|---|---|---|
+| P0 | Add error boundary around Globe3D | `src/App.jsx` | Prevents full blank-screen on WebGL crash; show "Globe unavailable — reload page" fallback |
+| P0 | Write events schema validation tests | `src/data/events.test.js` (new) | Every field, every event, sort order, no duplicate IDs |
+| P0 | Write color utility unit tests | `src/utils/colors.test.js` (new) | All EVENT_TYPES, fallback for unknown/undefined input |
+| P0 | Add `res.ok` check in useNews fetch | `src/hooks/useNews.js:22` | `if (!res.ok) throw new Error(res.statusText)` before `.json()` |
+| P1 | Fix cursor-stuck-as-pointer bug | `Globe3D.jsx:285,297` | Add `useEffect(() => { document.body.style.cursor = 'auto' }, [arcsData])` to reset cursor when live mode cycles arcs |
+| P1 | Fix Timeline NaN guard for zero-duration campaign | `Timeline.jsx:17` | `const progress = totalDuration > 0 ? Math.max(0, Math.min(1, (currentTime - startTime) / totalDuration)) : 0` |
+| P1 | Fix `key={i}` in EventCard targets | `EventCard.jsx:75` | Use `key={t.label}` or `key={t.lat + '-' + t.lng}` |
+| P1 | Fix `key={i}` in NewsFeed ticker | `NewsFeed.jsx:19` | Use `key={h.title + '-' + i}` |
+| P1 | Surface useNews error to UI | `App.jsx:49`, `NewsFeed.jsx` | Destructure `error` from `useNews()`; show "LIVE FEED UNAVAILABLE" badge in ticker if error is set |
+| P1 | Set up Vitest + React Testing Library | `package.json` | Install `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`; add `vitest.config.js` |
+| P1 | Write useSimulation unit tests | `src/hooks/useSimulation.test.js` (new) | Timeline filter, live cycling, time wrap, stable reference |
+| P1 | Write Timeline component tests | `src/components/Timeline.test.jsx` (new) | sliderValue calculation, visibleEvents filter, zero-duration guard |
+| P2 | Wrap Header, Legend, NewsFeed, EventCard in React.memo | respective files | Eliminate 60fps re-renders from timeline playback |
+| P2 | Verify ticker animation uses `transform` not `left`/`margin` | `src/index.css` | Confirm GPU compositor animation; add `will-change: transform` |
+| P2 | Build target review | `vite.config.js` | Lower to `es2020` if any pre-2021 browser support is needed |
+| P2 | Add WebGL capability check in Globe3D | `Globe3D.jsx` | Show user-friendly error before Three.js throws on WebGL-disabled browsers |
+| P3 | Add `computeArcAlt` NaN guard | `Globe3D.jsx:22` | Validate `lat` and `lng` are finite numbers before computing distance |
+| P3 | Add `focus-visible` outline to Globe3D container | `Globe3D.jsx` | Replace `outline-none` with `focus-visible:outline-2 focus-visible:outline-green-500` |
+
+---
+
+### Data Schema Validation — Summary
+
+All 28 events conform to the documented schema. No missing required fields detected.
+
+- `id` field: IDs 1–28 present, no duplicates. ID 24 is physically out of chronological order in the array (appears last, after 2023 events). No current code assumes array order, but a sort-by-timestamp test would catch this.
+- All events have `origin.lat`, `origin.lng`, `origin.label` — no nulls.
+- All events have `targets` as non-empty arrays with complete `lat`, `lng`, `label` fields.
+- All `arcColor` values are 2-element string arrays.
+- `importance` values in the dataset: only `'critical'` and `'major'` are used. `'moderate'` and `'minor'` are defined in `IMPORTANCE_COLORS` but appear in no events — their visual states are never exercised.
+- `simulated: true` correctly present on IDs 22, 23, 24 only.
+- Event ID 24 (`USS Carl Vinson`, `2026-04-10`) has `timestamp` 6 days before `TIMELINE_END` (`2026-04-17`). With today being `2026-04-18` and `TIMELINE_END` being yesterday, this event already falls outside the "all" campaign window unless `TIMELINE_END` is updated (flagged as P0 by Project Lead).
 
 ---
