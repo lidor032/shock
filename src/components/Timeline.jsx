@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { format } from 'date-fns'
 import { getImportanceColor } from '../utils/colors'
 
@@ -13,6 +14,8 @@ export default function Timeline({
   onSpeedChange,
   onEventClick,
 }) {
+  const [hoveredEvent, setHoveredEvent] = useState(null)
+
   const totalDuration  = endTime - startTime
   const progress       = totalDuration > 0 ? Math.max(0, Math.min(1, (currentTime - startTime) / totalDuration)) : 0
   const sliderValue    = Math.round(progress * 1000)
@@ -37,9 +40,10 @@ export default function Timeline({
               <button
                 key={ev.id}
                 onClick={() => { onTimeChange(ev.timestamp); onEventClick(ev) }}
-                title={ev.title}
                 className="absolute -translate-x-1/2 transition-all hover:scale-150"
                 style={{ left: `${pct}%`, bottom: 0 }}
+                onMouseEnter={() => setHoveredEvent({ ev, left: pct })}
+                onMouseLeave={() => setHoveredEvent(null)}
               >
                 <span
                   className="block rounded-full"
@@ -53,6 +57,20 @@ export default function Timeline({
               </button>
             )
           })}
+
+          {/* HUD tooltip for hovered event dot */}
+          {hoveredEvent && (
+            <div
+              className="absolute bottom-full mb-2 -translate-x-1/2 mil-panel border-glow px-2 py-1 pointer-events-none z-50 whitespace-nowrap"
+              style={{ left: `${hoveredEvent.left}%` }}
+            >
+              <div className="text-green-400 text-xs font-bold font-mono">{hoveredEvent.ev.title}</div>
+              <div className="text-green-700 text-xs font-mono">
+                {format(new Date(hoveredEvent.ev.timestamp), 'dd MMM yyyy HH:mm')}
+              </div>
+            </div>
+          )}
+
           {/* Playhead */}
           <div
             className="absolute bottom-0 top-0 w-px bg-green-400 pointer-events-none"

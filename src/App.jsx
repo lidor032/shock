@@ -138,17 +138,22 @@ export default function App() {
 
       <FullscreenToggle />
 
-      {/* Active arc count badge (live mode) */}
+      {/* Active arc count badge + keyboard nav hint (live mode) */}
       {mode === 'live' && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 fade-in">
-          <div className="mil-panel border-glow px-4 py-2 text-center">
-            <div className="text-green-700 text-xs tracking-widest">ACTIVE OPERATIONS</div>
-            <div className="text-green-400 glow font-bold text-sm">
-              {activeEvents.length} arc{activeEvents.length !== 1 ? 's' : ''} tracked
+        <>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 fade-in">
+            <div className="mil-panel border-glow px-4 py-2 text-center">
+              <div className="text-green-700 text-xs tracking-widest">ACTIVE OPERATIONS</div>
+              <div className="text-green-400 glow font-bold text-sm">
+                {activeEvents.length} arc{activeEvents.length !== 1 ? 's' : ''} tracked
+              </div>
+              <div className="text-green-800 text-xs mt-0.5">Click any arc or marker for details</div>
             </div>
-            <div className="text-green-800 text-xs mt-0.5">Click any arc or marker for details</div>
           </div>
-        </div>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 text-green-900 text-xs pointer-events-none select-none tracking-widest">
+            [ WASD · ↑↓←→ · +/− ]
+          </div>
+        </>
       )}
 
       {/* Timeline panel */}
