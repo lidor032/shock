@@ -1,0 +1,1 @@
+- [OSINT Globe Project Architecture](project_architecture.md) — component hierarchy, state shape, data pipeline, and known issues from 2026-04-18 audit
