@@ -76,10 +76,10 @@ function StatusChip({ label, value, color }) {
 function LiveClock() {
   const [time, setTime] = useState(new Date())
 
-  useState(() => {
+  useEffect(() => {
     const id = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(id)
-  })
+  }, [])
 
   return (
     <span className="text-green-400 glow font-bold tabular-nums">
