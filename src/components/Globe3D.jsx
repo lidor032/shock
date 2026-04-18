@@ -262,6 +262,14 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   }, [onEventClick])
 
   const htmlElement = useCallback((d) => {
+    if (d._type === 'flag') {
+      const el = document.createElement('div')
+      el.className = 'flag-marker'
+      el.innerHTML = `<span class="flag-emoji">${d.flag}</span><span class="flag-label">${d.label}</span>`
+      el.style.pointerEvents = 'none'
+      return el
+    }
+    // Default: event label
     const el = document.createElement('div')
     el.className     = 'event-label'
     el.textContent   = d.text
