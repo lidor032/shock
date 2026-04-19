@@ -386,6 +386,36 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   // Clean up cursor on unmount
   useEffect(() => () => { document.body.style.cursor = 'auto' }, [])
 
+  // ── WebGL context loss / restoration ─────────────────────────────────────
+  // The browser can revoke a WebGL context at any time (memory pressure, GPU
+  // reset, driver crash). Without interception the globe freezes silently.
+  // Calling e.preventDefault() stops Three.js from receiving the event so it
+  // does not try to render against the lost context. Setting ready=false shows
+  // the "INITIALIZING..." overlay while the OS recovers the GPU. On restore,
+  // a 500 ms delay lets the driver finish re-initialising before we hand
+  // control back to the globe.
+  // Dep: [ready] — we re-run only when ready flips so we always bind to the
+  // canvas that is currently live (context loss can only happen after ready).
+  useEffect(() => {
+    if (!ready || !globeRef.current) return
+    const renderer = globeRef.current.renderer?.()
+    const canvas = renderer?.domElement
+    if (!canvas) return
+    const handleContextLost = (e) => {
+      e.preventDefault()
+      setReady(false)  // triggers loading overlay while context recovers
+    }
+    const handleContextRestored = () => {
+      setTimeout(() => setReady(true), 500)
+    }
+    canvas.addEventListener('webglcontextlost', handleContextLost)
+    canvas.addEventListener('webglcontextrestored', handleContextRestored)
+    return () => {
+      canvas.removeEventListener('webglcontextlost', handleContextLost)
+      canvas.removeEventListener('webglcontextrestored', handleContextRestored)
+    }
+  }, [ready])
+
   // Reset cursor when arcsData cycles (live mode swaps arcs every 3.5 s without
   // firing a null hover event, leaving the cursor stuck as a pointer).
   useEffect(() => {

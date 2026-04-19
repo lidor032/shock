@@ -19,7 +19,7 @@ function NewsFeed({ headlines, newsError }) {
 
       {/* Scrolling ticker */}
       <div className="flex-1 overflow-hidden h-7 flex items-center">
-        <div className="ticker-track flex gap-0">
+        <div className="ticker-track flex gap-0" style={{ '--ticker-duration': `${items.length * 6}s` }}>
           {items.map((h, i) => (
             <span key={h.title + '-' + i} className="inline-flex items-center text-xs text-green-300 mr-10">
               <span className="text-yellow-500 mr-2 font-bold">[{h.source}]</span>
