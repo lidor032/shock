@@ -22,7 +22,7 @@ function Legend() {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <div className="absolute bottom-4 right-4 z-30 fade-in">
+    <div className="absolute bottom-4 right-4 z-30 fade-in hidden sm:block">
       <div className="mil-panel border-glow rounded p-3 min-w-44">
         <button
           onClick={() => setCollapsed(!collapsed)}

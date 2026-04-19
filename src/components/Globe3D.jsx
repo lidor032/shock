@@ -418,6 +418,7 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
       ref={containerRef}
       className="w-full h-full outline-none"
       tabIndex={0}
+      style={{ touchAction: 'none' }}
       onMouseDown={() => containerRef.current?.focus()}
       onTouchStart={() => containerRef.current?.focus()}
     >

@@ -91,7 +91,7 @@ export default function Timeline({
         </div>
 
         {/* Controls row */}
-        <div className="px-4 pb-3 flex items-center gap-4">
+        <div className="px-2 pb-2 sm:px-4 sm:pb-3 flex items-center gap-2 sm:gap-4">
           {/* Play/Pause */}
           <button
             onClick={onPlayPause}
@@ -125,7 +125,7 @@ export default function Timeline({
           </div>
 
           {/* Campaign date range labels */}
-          <div className="flex items-center gap-4 text-green-800 text-xs">
+          <div className="hidden sm:flex items-center gap-4 text-green-800 text-xs">
             <span>{format(new Date(startTime), 'dd MMM yyyy')}</span>
             <span>──</span>
             <span>{format(new Date(endTime), 'dd MMM yyyy')}</span>

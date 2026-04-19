@@ -31,7 +31,7 @@ function Header({ mode, onModeChange, activeEvents }) {
       </div>
 
       {/* Right block — status chips */}
-      <div className="mil-panel border-glow px-4 py-2 flex items-center gap-4 pointer-events-auto">
+      <div className="mil-panel border-glow px-4 py-2 hidden sm:flex items-center gap-4 pointer-events-auto">
         <StatusChip label="IRAN THREAT" value="CRITICAL" color="red" />
         <StatusChip label="ACTIVE OPS" value={activeEvents?.length ?? 0} color="amber" />
         <StatusChip label="US CARRIERS" value="2" color="blue" />
