@@ -104,11 +104,11 @@ export default function App() {
       {/* Campaign selector — visible in timeline mode */}
       {mode === 'timeline' && (
         <div className="absolute top-20 right-4 z-40 mil-panel border-glow p-2 rounded">
-          <label className="text-green-700 text-xs mr-2 font-mono tracking-widest">FOCUS:</label>
+          <label className="text-green-600 text-xs mr-2 font-mono tracking-widest">FOCUS:</label>
           <select
             value={activeCampaignId}
             onChange={handleCampaignChange}
-            className="bg-black text-green-400 border border-green-800 text-xs p-1 rounded font-mono outline-none hover:border-green-600 transition-colors"
+            className="bg-black text-green-400 border border-green-800 text-xs p-1 rounded font-mono outline-none hover:border-green-600 transition-colors cursor-pointer"
           >
             {campaigns.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>

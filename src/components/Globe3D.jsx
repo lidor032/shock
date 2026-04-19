@@ -123,15 +123,31 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   const containerRef = useRef()
   const keysDown = useRef(new Set())
   const rafKeyRef = useRef(null)
+  // Tracks the timestamp of the previous tickKeys frame for time-delta compensation
+  const lastKeyTsRef = useRef(null)
   // Guard so the arc altitude debug log only fires once per arcsData recomputation
   const arcLogFiredRef = useRef(false)
   const [dims, setDims] = useState({ w: window.innerWidth, h: window.innerHeight })
   const [ready, setReady] = useState(false)
 
+  // Task 3 — WebGL capability check (lazy initial state, runs once at mount)
+  const [webglSupported] = useState(() => {
+    try {
+      const canvas = document.createElement('canvas')
+      return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'))
+    } catch { return false }
+  })
+
+  // Task 1 — ResizeObserver on the container div so dims track actual layout
+  // size, not window size. This stays accurate when sidebars / panels are added.
   useEffect(() => {
-    const handler = () => setDims({ w: window.innerWidth, h: window.innerHeight })
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
+    if (!containerRef.current) return
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      setDims({ w: Math.round(width), h: Math.round(height) })
+    })
+    ro.observe(containerRef.current)
+    return () => ro.disconnect()
   }, [])
 
   // ── Initialize globe controls ──────────────────────────────────────────────
@@ -188,18 +204,27 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
     function tickKeys() {
       if (!globeRef.current || keysDown.current.size === 0) {
         rafKeyRef.current = null
+        lastKeyTsRef.current = null
         return
       }
+
+      // Task 2 — frame-rate compensation: normalise to 60 fps (16.67 ms/frame).
+      // delta = 1.0 at exactly 60 fps; < 1.0 when faster; > 1.0 when slower.
+      // First frame gets delta = 1 so there is no lurch on key-down.
+      const now = performance.now()
+      const delta = lastKeyTsRef.current ? (now - lastKeyTsRef.current) / 16.67 : 1
+      lastKeyTsRef.current = now
+
       const pov = globeRef.current.pointOfView()
       let { lat, lng, altitude } = pov
       const keys = keysDown.current
 
-      if (keys.has('w') || keys.has('arrowup'))    lat = Math.min(90,  lat + KEY_PAN_SPEED)
-      if (keys.has('s') || keys.has('arrowdown'))  lat = Math.max(-90, lat - KEY_PAN_SPEED)
-      if (keys.has('a') || keys.has('arrowleft'))  lng -= KEY_PAN_SPEED
-      if (keys.has('d') || keys.has('arrowright')) lng += KEY_PAN_SPEED
-      if (keys.has('+') || keys.has('='))          altitude = Math.max(KEY_MIN_ALT, altitude - KEY_ZOOM_STEP)
-      if (keys.has('-') || keys.has('_'))          altitude = Math.min(KEY_MAX_ALT,  altitude + KEY_ZOOM_STEP)
+      if (keys.has('w') || keys.has('arrowup'))    lat = Math.min(90,  lat + KEY_PAN_SPEED * delta)
+      if (keys.has('s') || keys.has('arrowdown'))  lat = Math.max(-90, lat - KEY_PAN_SPEED * delta)
+      if (keys.has('a') || keys.has('arrowleft'))  lng -= KEY_PAN_SPEED * delta
+      if (keys.has('d') || keys.has('arrowright')) lng += KEY_PAN_SPEED * delta
+      if (keys.has('+') || keys.has('='))          altitude = Math.max(KEY_MIN_ALT, altitude - KEY_ZOOM_STEP * delta)
+      if (keys.has('-') || keys.has('_'))          altitude = Math.min(KEY_MAX_ALT,  altitude + KEY_ZOOM_STEP * delta)
 
       globeRef.current.pointOfView({ lat, lng, altitude }, 120)
       rafKeyRef.current = requestAnimationFrame(tickKeys)
@@ -374,6 +399,19 @@ export default function Globe3D({ events, activeEvents, selectedEvent, onEventCl
   const onArcHover   = useCallback((arc) => { document.body.style.cursor = arc ? 'pointer' : 'auto' }, [])
   const pointLabel   = useCallback((d) => d.label, [])
   const onPointHover = useCallback((pt) => { document.body.style.cursor = pt ? 'pointer' : 'auto' }, [])
+
+  // Task 3 — WebGL fallback: render before the globe tree so no Three.js
+  // initialisation is attempted on hardware where WebGL is unavailable.
+  if (!webglSupported) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-black">
+        <div className="text-center">
+          <div className="text-red-500 text-lg font-bold tracking-widest">WEBGL UNAVAILABLE</div>
+          <div className="text-green-700 text-xs mt-2">Enable hardware acceleration in browser settings</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div

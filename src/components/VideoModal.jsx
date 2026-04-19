@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { getTypeColor } from '../utils/colors'
+import { getTypeColor, getTypeIcon } from '../utils/colors'
 
 export default function VideoModal({ event, onClose }) {
   const typeColor   = getTypeColor(event?.type)
@@ -39,7 +39,7 @@ export default function VideoModal({ event, onClose }) {
           <div>
             <div className="text-xs tracking-widest text-green-600">VIDEO INTELLIGENCE</div>
             <div className="text-sm font-bold" style={{ color: typeColor }}>
-              {event.title}
+              {getTypeIcon(event.type)} {event.title}
             </div>
             <div className="text-xs text-green-400">{event.subtitle}</div>
           </div>
