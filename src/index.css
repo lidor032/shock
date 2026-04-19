@@ -106,9 +106,11 @@ body::after {
   100% { transform: translateX(-100%); }
 }
 .ticker-track {
-  animation: ticker-scroll 320s linear infinite;
+  animation: ticker-scroll var(--ticker-duration, 320s) linear infinite;
   white-space: nowrap;
   display: inline-block;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 .ticker-track:hover {
   animation-play-state: paused;

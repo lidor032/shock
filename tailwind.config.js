@@ -10,7 +10,7 @@ export default {
         military: {
           green: '#00ff41',
           amber: '#ffb000',
-          red: '#ff2222',
+          red: '#ff3333',
           blue: '#0088ff',
           dim: '#003300',
         },

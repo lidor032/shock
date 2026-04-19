@@ -1,4 +1,6 @@
-export default function NewsFeed({ headlines }) {
+import React from 'react'
+
+function NewsFeed({ headlines, newsError }) {
   if (!headlines?.length) return null
 
   // Duplicate array to create seamless loop
@@ -10,13 +12,16 @@ export default function NewsFeed({ headlines }) {
       <div className="flex-shrink-0 bg-red-900 border-r border-red-700 px-3 py-1 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
         <span className="text-red-300 text-xs font-bold tracking-widest">LIVE NEWS</span>
+        {newsError && (
+          <span className="text-red-500 text-xs font-bold tracking-widest mr-2">FEED ERR</span>
+        )}
       </div>
 
       {/* Scrolling ticker */}
       <div className="flex-1 overflow-hidden h-7 flex items-center">
-        <div className="ticker-track flex gap-0">
+        <div className="ticker-track flex gap-0" style={{ '--ticker-duration': `${items.length * 6}s` }}>
           {items.map((h, i) => (
-            <span key={i} className="inline-flex items-center text-xs text-green-300 mr-10">
+            <span key={h.title + '-' + i} className="inline-flex items-center text-xs text-green-300 mr-10">
               <span className="text-yellow-500 mr-2 font-bold">[{h.source}]</span>
               <a
                 href={h.url !== '#' ? h.url : undefined}
@@ -35,3 +40,5 @@ export default function NewsFeed({ headlines }) {
     </div>
   )
 }
+
+export default React.memo(NewsFeed)

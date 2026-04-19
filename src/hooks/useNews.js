@@ -21,6 +21,7 @@ export function useNews() {
       try {
         const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(NEWS_QUERY)}&sortBy=publishedAt&pageSize=30&apiKey=${NEWS_API_KEY}`
         const res  = await fetch(url)
+        if (!res.ok) throw new Error(res.statusText)
         const data = await res.json()
         if (data.status === 'ok' && data.articles?.length) {
           setHeadlines(

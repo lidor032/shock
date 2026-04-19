@@ -19,7 +19,7 @@ Key confirmed defects and patterns discovered during QA review (2026-04-18):
 
 **Schema conventions:** All 28 events validated. Only 'critical' and 'major' importance values used (not 'moderate' or 'minor'). ID 24 is out of physical array order. `arcColor` is always a 2-element string array. `simulated: true` on IDs 22, 23, 24.
 
-**Test infrastructure:** Zero tests. Vitest is the correct choice (Vite-native). Globe3D must be mocked in jsdom tests (Three.js needs real WebGL).
+**Test infrastructure (updated 2026-04-19):** 43 tests across 5 files: `src/data/events.test.js`, `src/hooks/useSimulation.test.js`, `src/utils/colors.test.js`, `src/__tests__/Timeline.test.jsx`, `src/__tests__/App.test.jsx`. Vitest + jsdom + @testing-library/react. Setup file at `src/test/setup.js` (imports `@testing-library/jest-dom`). Globe3D must be mocked in jsdom tests via `vi.mock('../components/Globe3D', ...)`. `useNews` must be mocked to prevent fetch calls. Timeline dot-button count approach: total buttons minus 5 fixed controls (1 play/pause + 4 speed). The `__tests__/` directory is used for component/integration tests; hook and util tests live next to their source files.
 
 **Why:** Documented for future reviews to avoid re-discovering the same issues.
 **How to apply:** Start any new review by checking these known-fragile areas first.

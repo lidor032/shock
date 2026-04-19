@@ -1,6 +1,6 @@
+import React, { useState } from 'react'
 import { TYPE_COLORS, COUNTRY_COLORS } from '../utils/colors'
 import { EVENT_TYPES, COUNTRIES } from '../data/events'
-import { useState } from 'react'
 
 // Strike types — fast projectile events
 const STRIKE_TYPES = [
@@ -18,11 +18,11 @@ const MOVEMENT_TYPES = [
   EVENT_TYPES.AIRLIFT,
 ]
 
-export default function Legend() {
+function Legend() {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <div className="absolute bottom-4 right-4 z-30 fade-in">
+    <div className="absolute bottom-4 right-4 z-30 fade-in hidden sm:block">
       <div className="mil-panel border-glow rounded p-3 min-w-44">
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -134,3 +134,5 @@ function DotSwatch({ color }) {
     />
   )
 }
+
+export default React.memo(Legend)

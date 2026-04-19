@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { TIMELINE_START, TIMELINE_END } from '../data/events'
 
-const MS_PER_REAL_MS_AT_1X = 86400           // 1 real second = 1 game day at 1×
+const MS_PER_REAL_MS_AT_1X = 3600            // 1 real second = 1 game hour at 1×
 const ARC_VISIBLE_WINDOW   = 12 * 60 * 60 * 1000  // 12 game-hours
 const LIVE_CYCLE_INTERVAL  = 3500
 

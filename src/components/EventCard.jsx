@@ -10,8 +10,7 @@ export default function EventCard({ event, onClose, onWatchVideo }) {
 
   return (
     <div
-      className="absolute right-4 top-28 bottom-20 z-30 w-80 fade-in flex flex-col"
-      style={{ maxHeight: 'calc(100vh - 180px)' }}
+      className="absolute right-0 left-0 bottom-0 top-auto sm:right-4 sm:left-auto sm:top-28 sm:bottom-20 z-30 w-full sm:w-80 fade-in flex flex-col rounded-t-xl sm:rounded-none max-h-[60vh] sm:max-h-[calc(100vh-180px)]"
     >
       <div
         className="mil-panel rounded flex flex-col overflow-hidden"
@@ -73,7 +72,7 @@ export default function EventCard({ event, onClose, onWatchVideo }) {
             <FieldLabel>TARGET(S)</FieldLabel>
             <div className="ml-2 space-y-0.5">
               {event.targets?.map((t, i) => (
-                <div key={i} className="text-xs text-green-400">↳ {t.label}</div>
+                <div key={t.label} className="text-xs text-green-400">↳ {t.label}</div>
               ))}
             </div>
           </div>
